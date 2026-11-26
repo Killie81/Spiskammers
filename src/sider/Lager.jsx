@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { hentLager, rpc } from '../supabase.js';
-import { STEDER, stedNavn, prosent, dagerIgjen } from '../format.js';
+import { stedNavn, prosent, dagerIgjen } from '../format.js';
 import { Restbar, Holdbar } from '../deler/Rest.jsx';
 import UttakBekreft from '../deler/UttakBekreft.jsx';
+import Ikon, { StedMerke } from '../deler/Ikon.jsx';
+import StedVelger, { tellPerSted } from '../deler/StedVelger.jsx';
 
-export default function Lager({ husstand, vis }) {
+export default function Lager({ husstand, vis, startSted = 'alle' }) {
   const [lager, setLager] = useState(null);
-  const [sted, setSted] = useState('alle');
+  const [sted, setSted] = useState(startSted);
   const [søk, setSøk] = useState('');
   const [åpen, setÅpen] = useState(null);
   const [handling, setHandling] = useState(null); // uttak | flytt
@@ -34,19 +36,13 @@ export default function Lager({ husstand, vis }) {
   return (
     <section className="lager">
       {snart.length > 0 && (
-        <div className="kort advarsel">
-          <b>{snart.length} {snart.length === 1 ? 'vare går' : 'varer går'} ut innen to dager:</b> {snart.map((p) => p.navn).join(', ')}
+        <div className="banner">
+          <Ikon navn="klokke" størrelse={22} />
+          <span><b>{snart.length} {snart.length === 1 ? 'vare går' : 'varer går'} ut innen to dager:</b> {snart.map((p) => p.navn).join(', ')}</span>
         </div>
       )}
-      <div className="bryter">
-        <button type="button" className={sted === 'alle' ? 'på' : ''} onClick={() => setSted('alle')}>Alle ({lager.length})</button>
-        {STEDER.map(([id, navn]) => (
-          <button key={id} type="button" className={sted === id ? 'på' : ''} onClick={() => setSted(id)}>
-            {navn} ({lager.filter((p) => p.sted === id).length})
-          </button>
-        ))}
-      </div>
-      <input className="søk" type="search" placeholder="Søk …" value={søk} onChange={(e) => setSøk(e.target.value)} />
+      <StedVelger valgt={sted} onVelg={setSted} tall={tellPerSted(lager)} medAlle klasse="klebrig" />
+      <label className="søkefelt bred"><Ikon navn="søk" størrelse={18} /><input type="search" placeholder="Søk i lageret" value={søk} onChange={(e) => setSøk(e.target.value)} /></label>
 
       {åpen && (
         <div className="ark" role="dialog" aria-label={åpen.navn}>
@@ -57,12 +53,11 @@ export default function Lager({ husstand, vis }) {
               <h2>{åpen.navn}</h2>
               <p className="dempet">{stedNavn(åpen.sted)} · {prosent(åpen.andel)} igjen · <Holdbar dato={åpen.holdbarhet} type={åpen.dato_type} /></p>
               {handling === 'flytt' ? (
-                <div className="valg">
-                  {STEDER.filter(([id]) => id !== åpen.sted).map(([id, navn]) => (
-                    <button key={id} type="button" onClick={() => flytt(id)}>{navn}</button>
-                  ))}
+                <>
+                  <p className="dempet">Flytt til:</p>
+                  <StedVelger valgt={åpen.sted} onVelg={(id) => (id !== åpen.sted ? flytt(id) : setHandling(null))} />
                   <button type="button" className="lenke" onClick={() => setHandling(null)}>Tilbake</button>
-                </div>
+                </>
               ) : (
                 <div className="valg">
                   <button type="button" className="primær" onClick={() => setHandling('uttak')}>Ta ut</button>
@@ -79,8 +74,9 @@ export default function Lager({ husstand, vis }) {
         {vist.map((p) => (
           <li key={p.id}>
             <button type="button" onClick={() => { setÅpen(p); setHandling(null); }}>
-              <span className="navn"><b>{p.navn}</b>{sted === 'alle' && <small className="dempet"> · {stedNavn(p.sted)}</small>}</span>
-              <Restbar andel={Number(p.andel)} />
+              <StedMerke sted={p.sted} />
+              <span className="navn"><b>{p.navn}</b><small className="dempet">{[p.merke, stedNavn(p.sted)].filter(Boolean).join(' · ')}</small></span>
+              <span className="rest"><Restbar andel={Number(p.andel)} /><small className="dempet">{prosent(p.andel)}</small></span>
               <Holdbar dato={p.holdbarhet} type={p.dato_type} />
             </button>
           </li>

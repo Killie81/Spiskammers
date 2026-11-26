@@ -92,8 +92,12 @@ Deno.serve(async (req) => {
   const { data: bruker, error: authFeil } = await sb.auth.getUser(token);
   if (authFeil || !bruker?.user) return json({ feil: "Ikke innlogget" }, 401);
 
-  const key = Deno.env.get("ANTHROPIC_API_KEY");
+  const key = (Deno.env.get("ANTHROPIC_API_KEY") ?? "").trim();
   if (!key) return json({ feil: "ANTHROPIC_API_KEY mangler i Supabase" }, 500);
+  // En gyldig nøkkel er én sammenhengende tekst som starter med sk-ant-. Sjekk før bruk, så nøkkelen aldri havner i en feilmelding.
+  if (!/^sk-ant-[A-Za-z0-9_-]+$/.test(key)) {
+    return json({ feil: "ANTHROPIC_API_KEY i Supabase har feil format. Lim inn bare nøkkelen (sk-ant-…), uten annen tekst." }, 500);
+  }
 
   let input: { modus: string; bilde: string; mediaType?: string; ean?: string | null; kandidater?: Kandidat[] };
   try { input = await req.json(); } catch { return json({ feil: "Ugyldig forespørsel" }, 400); }
@@ -108,15 +112,21 @@ Deno.serve(async (req) => {
     ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: input.bilde } }
     : { type: "image", source: { type: "base64", media_type: mediaType, data: input.bilde } };
 
-  const svar = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-    body: JSON.stringify({
-      model: MODEL,
-      max_tokens: input.modus === "kvittering" ? 4000 : 800,
-      messages: [{ role: "user", content: [kilde, { type: "text", text: prompt }] }],
-    }),
-  });
+  let svar: Response;
+  try {
+    svar = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: input.modus === "kvittering" ? 4000 : 800,
+        messages: [{ role: "user", content: [kilde, { type: "text", text: prompt }] }],
+      }),
+    });
+  } catch {
+    // Ikke logg eller returner selve feilen: den kan inneholde nøkkelen.
+    return json({ feil: "Fikk ikke kontakt med Claude. Prøv igjen om litt." }, 502);
+  }
 
   if (!svar.ok) {
     const t = await svar.text();

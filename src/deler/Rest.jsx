@@ -10,6 +10,6 @@ export function Restbar({ andel }) {
 
 export function Holdbar({ dato, type }) {
   const d = dagerIgjen(dato);
-  const klasse = d == null ? 'dempet' : d <= 2 ? 'varsel' : d <= 5 ? 'snart' : 'dempet';
-  return <span className={klasse}>{holdbarTekst(dato)}{type === 'anslag' && dato ? ' (anslag)' : ''}</span>;
+  const nivå = d == null ? 'ingen' : d <= 2 ? 'varsel' : d <= 5 ? 'snart' : 'ok';
+  return <span className={`frist frist-${nivå}`}>{holdbarTekst(dato)}{type === 'anslag' && dato ? ' ≈' : ''}</span>;
 }
