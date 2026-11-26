@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { rpc, spørClaude, lastOppBilde } from '../supabase.js';
+import { useEffect, useState } from 'react';
+import { supabase, rpc, spørClaude, lastOppBilde } from '../supabase.js';
 import { krympBilde, lesStrekkode, tilBase64 } from '../bilde.js';
-import { holdbarTekst } from '../format.js';
+import { holdbarTekst, kr, leggTilDager } from '../format.js';
 import Fotoknapp from '../deler/Fotoknapp.jsx';
 import Kvittering from './Kvittering.jsx';
 import Ikon from '../deler/Ikon.jsx';
@@ -19,6 +19,12 @@ export default function Inn({ husstand, vis }) {
   const [fotoAndel, setFotoAndel] = useState(null);
   const [datoLest, setDatoLest] = useState(false);
   const [lagrer, setLagrer] = useState(false);
+
+  const [poser, setPoser] = useState(null);
+  useEffect(() => {
+    supabase.from('utgift').select('belop, antall').eq('type', 'pose').gte('dato', leggTilDager(null, -365))
+      .then(({ data }) => setPoser({ kr: (data || []).reduce((a, u) => a + Number(u.belop), 0), stk: (data || []).reduce((a, u) => a + (u.antall || 1), 0) }));
+  }, [modus]);
 
   const sett = (k, x) => setV((o) => ({ ...o, [k]: x }));
   const nullstill = () => { setFase('start'); setV(TOM); setBilde(null); setBlob(null); setFotoAndel(null); setDatoLest(false); };
@@ -67,6 +73,15 @@ export default function Inn({ husstand, vis }) {
 
   return (
     <section className="inn">
+      {poser && (
+        <div className="posepåminner">
+          <Ikon navn="pose" størrelse={26} />
+          <div>
+            <b>{kr(poser.kr)} kr på bæreposer siste år</b>
+            <span>{poser.stk ? `${poser.stk} poser. ` : ''}Husk handlenettet neste gang!</span>
+          </div>
+        </div>
+      )}
       <div className="bryter">
         <button type="button" className={modus === 'vare' ? 'på' : ''} onClick={() => setModus('vare')}><Ikon navn="boks" størrelse={18} /> Vare</button>
         <button type="button" className={modus === 'kvittering' ? 'på' : ''} onClick={() => setModus('kvittering')}><Ikon navn="kvittering" størrelse={18} /> Kvittering</button>

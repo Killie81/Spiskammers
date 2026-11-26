@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { hentLager, spørClaude, lastOppBilde } from '../supabase.js';
 import { krympBilde, lesStrekkode, tilBase64 } from '../bilde.js';
-import { stedNavn, prosent, dagerIgjen } from '../format.js';
+import { stedNavn, prosent, dagerIgjen, grupper } from '../format.js';
 import Fotoknapp from '../deler/Fotoknapp.jsx';
 import UttakBekreft from '../deler/UttakBekreft.jsx';
 import { Holdbar, Restbar } from '../deler/Rest.jsx';
@@ -52,11 +52,11 @@ export default function Uttak({ husstand, vis, gåTil }) {
   }
 
   // «Nylig og sannsynlig»: åpnede pakninger og det som går ut først.
-  const forslag = [...lager]
+  const forslag = grupper(lager)
     .sort((a, b) => (a.apnet ? 0 : 1) - (b.apnet ? 0 : 1) || (dagerIgjen(a.holdbarhet) ?? 999) - (dagerIgjen(b.holdbarhet) ?? 999))
     .slice(0, 8);
   const treffSøk = søk.trim().length > 1
-    ? lager.filter((p) => `${p.navn} ${p.merke || ''}`.toLowerCase().includes(søk.trim().toLowerCase())).slice(0, 12)
+    ? grupper(lager).filter((p) => `${p.navn} ${p.merke || ''}`.toLowerCase().includes(søk.trim().toLowerCase())).slice(0, 12)
     : [];
 
   const velg = (p, m = 'manuelt') => { setValgt(p); setMetode(m); setFase('bekreft'); };
@@ -130,7 +130,7 @@ export default function Uttak({ husstand, vis, gåTil }) {
         {(treffSøk.length ? treffSøk : forslag).map((p) => (
           <button key={p.id} type="button" className="flis" onClick={() => velg(p)}>
             <span className="flis-topp"><StedMerke sted={p.sted} /><Holdbar dato={p.holdbarhet} type={p.dato_type} /></span>
-            <b>{p.navn}</b>
+            <b>{p.navn}{p.antall > 1 && <span className="antall"> · {p.antall} stk</span>}</b>
             <span className="flis-bunn"><Restbar andel={Number(p.andel)} /><span className="dempet">{prosent(p.andel)}</span></span>
           </button>
         ))}

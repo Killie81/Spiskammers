@@ -155,6 +155,12 @@ input, select { min-height: 52px; padding: 10px 14px; font-size: 17px; font-weig
 .alternativer button { min-height: 48px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--flate); font-weight: 600; }
 
 /* Legg inn */
+.posepåminner { display: flex; align-items: center; gap: 14px; padding: 14px 18px; margin-bottom: 18px; border-radius: 16px;
+  background: var(--rav-svak); color: var(--rav); }
+.posepåminner div { display: grid; }
+.posepåminner b { color: var(--ink); font-weight: 800; font-size: 17px; }
+.posepåminner span { color: var(--soft); font-size: 14px; font-weight: 600; }
+.antall { color: var(--soft); font-weight: 700; white-space: nowrap; }
 .skjema { display: grid; gap: 16px; }
 .to { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: end; }
 .teller { display: flex; align-items: center; gap: 18px; }
