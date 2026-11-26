@@ -245,6 +245,12 @@ create or replace view lager with (security_invoker = true) as
   from pakning p join produkt pr on pr.id = p.produkt_id
   where p.status = 'aktiv';
 
+-- Innloggede brukere får bruke tabellene; radene de ser styres av tilgangsreglene over.
+grant usage on schema public to authenticated;
+grant select, insert, update, delete on husstand, produkt, kvittering, pakning, hendelse, utgift to authenticated;
+grant select on medlem, lager to authenticated;
+revoke all on husstand, medlem, produkt, kvittering, pakning, hendelse, utgift, lager from anon;
+
 -- ---------- Bildelager ----------
 
 insert into storage.buckets (id, name, public) values ('bilder', 'bilder', false)
