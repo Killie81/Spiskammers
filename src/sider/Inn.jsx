@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { rpc, spørClaude, lastOppBilde } from '../supabase.js';
 import { krympBilde, lesStrekkode, tilBase64 } from '../bilde.js';
-import { STEDER, holdbarTekst } from '../format.js';
+import { holdbarTekst } from '../format.js';
 import Fotoknapp from '../deler/Fotoknapp.jsx';
 import Kvittering from './Kvittering.jsx';
 import Ikon from '../deler/Ikon.jsx';
+import StedVelger from '../deler/StedVelger.jsx';
 
 const TOM = { vare: '', merke: '', ean: '', kategori: 'annet', pakning_mengde: '', pakning_enhet: 'stk', andel: 1, holdbarhet: '', dato_type: 'best_for', lagringssted: 'kjoleskap', antall: 1 };
 const ANDELER = [[1, '1/1 full'], [0.75, '¾'], [0.5, '½'], [0.25, '¼']];
@@ -114,11 +115,7 @@ export default function Inn({ husstand, vis }) {
               )}
             </div>
             <span className="etikett">Lagringssted</span>
-            <div className="valg">
-              {STEDER.map(([id, navn]) => (
-                <button key={id} type="button" className={v.lagringssted === id ? 'på' : ''} onClick={() => sett('lagringssted', id)}><Ikon navn={id} størrelse={18} /> {navn}</button>
-              ))}
-            </div>
+            <StedVelger valgt={v.lagringssted} onVelg={(id) => sett('lagringssted', id)} />
             <div className="to">
               <label>{v.dato_type === 'siste_forbruksdag' ? 'Siste forbruksdag' : 'Best før'}
                 <input type="date" value={v.holdbarhet} onChange={(e) => { sett('holdbarhet', e.target.value); setDatoLest(false); }} /></label>

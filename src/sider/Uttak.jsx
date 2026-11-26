@@ -6,6 +6,7 @@ import Fotoknapp from '../deler/Fotoknapp.jsx';
 import UttakBekreft from '../deler/UttakBekreft.jsx';
 import { Holdbar, Restbar } from '../deler/Rest.jsx';
 import Ikon, { StedMerke } from '../deler/Ikon.jsx';
+import StedVelger, { tellPerSted } from '../deler/StedVelger.jsx';
 
 // Startskjermen på kjøkkenet: ta bilde av varen som tas ut.
 export default function Uttak({ husstand, vis, gåTil }) {
@@ -119,6 +120,8 @@ export default function Uttak({ husstand, vis, gåTil }) {
         </div>
       )}
       <Fotoknapp tekst="Ta bilde av varen du tar ut" undertekst="Varen og mengden kjennes igjen automatisk" onFil={påBilde} />
+      <div className="seksjon-hode"><h2>Lagringssteder</h2></div>
+      <StedVelger tall={tellPerSted(lager)} onVelg={(id) => gåTil('lager', id)} />
       <div className="seksjon-hode">
         <h2>{treffSøk.length ? 'Søketreff' : 'Bruk først'}</h2>
         <label className="søkefelt"><Ikon navn="søk" størrelse={18} /><input type="search" placeholder="Søk i lageret" value={søk} onChange={(e) => setSøk(e.target.value)} /></label>

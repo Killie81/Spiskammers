@@ -18,6 +18,8 @@ export default function App() {
   const [økt, setØkt] = useState(undefined);
   const [husstand, setHusstand] = useState(null);
   const [fane, setFane] = useState('uttak');
+  const [lagerSted, setLagerSted] = useState('alle');
+  const gåTil = useCallback((f, sted) => { if (sted) setLagerSted(sted); setFane(f); window.scrollTo(0, 0); }, []);
   const [melding, setMelding] = useState(null);
   const timer = useRef(null);
 
@@ -51,7 +53,7 @@ export default function App() {
   if (!økt) return <Login />;
   if (!husstand) return <main className="sentrert"><span className="spinn" /></main>;
 
-  const felles = { husstand, setHusstand, vis, gåTil: setFane };
+  const felles = { husstand, setHusstand, vis, gåTil };
 
   return (
     <div className="app">
@@ -59,7 +61,7 @@ export default function App() {
         <span className="merke"><span className="merke-ikon"><Ikon navn="boks" størrelse={18} /></span>Spiskammers</span>
         <nav className="faner" aria-label="Hovedmeny">
           {FANER.map(([id, navn, ikon]) => (
-            <button key={id} type="button" className={fane === id ? 'på' : ''} aria-current={fane === id ? 'page' : undefined} onClick={() => setFane(id)}>
+            <button key={id} type="button" className={fane === id ? 'på' : ''} aria-current={fane === id ? 'page' : undefined} onClick={() => gåTil(id, id === 'lager' ? 'alle' : undefined)}>
               <Ikon navn={ikon} størrelse={20} /><span>{navn}</span>
             </button>
           ))}
@@ -68,7 +70,7 @@ export default function App() {
       <main className="innhold">
         {fane === 'uttak' && <Uttak {...felles} />}
         {fane === 'inn' && <Inn {...felles} />}
-        {fane === 'lager' && <Lager {...felles} />}
+        {fane === 'lager' && <Lager key={lagerSted} startSted={lagerSted} {...felles} />}
         {fane === 'mer' && <Mer {...felles} />}
       </main>
       {melding && (

@@ -86,7 +86,7 @@ input, select { min-height: 52px; padding: 10px 14px; font-size: 17px; font-weig
 .valg { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .valg button:not(.primær):not(.lenke) { display: inline-flex; align-items: center; gap: 8px; min-height: 56px; min-width: 72px; padding: 0 20px; border-radius: 14px;
   border: 1px solid var(--line); background: var(--flate); font-size: 18px; font-weight: 600; }
-.valg button.på { background: var(--fjord); border-color: var(--fjord); color: var(--fjord-ink); }
+.valg button.på:not(.primær):not(.lenke) { background: var(--fjord); border-color: var(--fjord); color: var(--fjord-ink); }
 .valg button.kastet { border-color: color-mix(in srgb, var(--lyng) 45%, var(--line)); color: var(--lyng); }
 .bryter { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
 .bryter button { display: inline-flex; align-items: center; gap: 8px; min-height: 46px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--line);
@@ -116,6 +116,18 @@ input, select { min-height: 52px; padding: 10px 14px; font-size: 17px; font-weig
 .søkefelt.bred { width: 100%; margin-bottom: 18px; }
 .banner { display: flex; align-items: center; gap: 14px; padding: 16px 20px; margin-bottom: 18px; border-radius: 16px; background: var(--lyng-svak); color: var(--lyng); }
 .banner b { font-weight: 700; } .banner span { color: var(--ink); }
+
+/* Lagringssteder som store ikonknapper */
+.stedvelger { display: grid; gap: 8px; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.stedvelger.n6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.stedknapp { --c: var(--fjord); display: grid; justify-items: center; align-content: center; gap: 4px; min-height: 88px; padding: 10px 4px;
+  border-radius: 16px; border: 1px solid var(--line); background: var(--flate); color: var(--ink); text-align: center; transition: background .15s, border-color .15s; }
+.stedknapp-ikon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); }
+.stedknapp-navn { font-size: 14px; font-weight: 700; line-height: 1.15; }
+.stedknapp-tall { font-size: 12px; font-weight: 700; color: var(--soft); font-variant-numeric: tabular-nums; }
+.stedknapp.på { border-color: var(--c); background: color-mix(in srgb, var(--c) 12%, var(--flate)); box-shadow: inset 0 0 0 1px var(--c); }
+.stedknapp.sted-alle { --c: var(--ink); }
+.stedvelger.klebrig { position: sticky; top: 81px; z-index: 4; padding: 10px 0; margin: -10px 0 8px; background: var(--bg); }
 
 /* Ta ut */
 .uttak { display: grid; gap: 22px; }
@@ -206,9 +218,35 @@ summary { min-height: 48px; display: flex; align-items: center; color: var(--sof
   .liste .frist { grid-column: 3; grid-row: 1; }
 }
 @media (max-width: 600px) {
-  .merke { font-size: 0; gap: 0; }
-  .topp { gap: 10px; }
-  .faner { flex: 1; justify-content: space-between; }
+  body { font-size: 16px; }
+  /* Hovedmenyen flyttes ned til tommelen */
+  .topp { position: fixed; inset: auto 0 0 0; top: auto; padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); border-bottom: 0; border-top: 1px solid var(--line); }
+  .merke { display: none; }
+  .faner { flex: 1; justify-content: space-between; background: transparent; padding: 0; gap: 2px; }
+  .faner button { flex: 1; flex-direction: column; gap: 2px; min-height: 58px; padding: 6px 0 4px; font-size: 11px; font-weight: 700; }
+  .faner button span { display: inline; }
+  .faner button.på { background: var(--fjord-svak); color: var(--fjord); box-shadow: none; }
+  .innhold { padding: calc(16px + env(safe-area-inset-top)) 16px calc(110px + env(safe-area-inset-bottom)); }
+  .melding { bottom: calc(86px + env(safe-area-inset-bottom)); }
+  .ark { bottom: calc(71px + env(safe-area-inset-bottom)); max-height: 75dvh; overflow-y: auto; }
+  .stedvelger.klebrig { top: 0; padding-top: calc(10px + env(safe-area-inset-top)); }
+  .stedvelger { gap: 6px; }
+  .stedknapp { min-height: 76px; padding: 8px 0; border-radius: 14px; }
+  .stedknapp-navn { font-size: 11px; letter-spacing: -0.01em; }
+  .stedknapp-ikon { width: 36px; height: 36px; }
+  /* Filteret i Lager ligger fast øverst: én kompakt rad */
+  .stedvelger.n6 { gap: 4px; }
+  .stedvelger.n6 .stedknapp { min-height: 62px; padding: 6px 0; gap: 2px; border-radius: 12px; }
+  .stedvelger.n6 .stedknapp-ikon { width: 30px; height: 30px; border-radius: 9px; }
+  .stedvelger.n6 .stedknapp-ikon .ikon { width: 18px; height: 18px; }
+  .stedvelger.n6 .stedknapp-navn { font-size: 10px; }
+  .stedvelger.n6 .stedknapp-tall { display: none; }
+  .velkommen h1 { font-size: 28px; }
+  .uttak { gap: 16px; }
+  .valg button:not(.primær):not(.lenke) { min-height: 52px; padding: 0 16px; font-size: 17px; }
+  .liste button { padding: 12px 14px; gap: 12px; min-height: 68px; }
+  .kort { padding: 18px 14px; }
+  .skjema .valg button:not(.primær):not(.lenke) { flex: 1 1 0; min-width: 0; padding: 0 8px; }
   .rad { grid-template-columns: minmax(0, 1fr); }
   .forhånd.liten { max-height: 200px; }
   .kamera { min-height: 108px; padding: 20px; gap: 16px; }
