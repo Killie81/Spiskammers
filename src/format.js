@@ -110,3 +110,10 @@ export function ukeStart(dato = new Date()) {
   d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
+
+// Rest i prosent ut fra vekt: (vekt − emballasje) / innhold. 1 ml regnes som 1 g. Null hvis noe mangler.
+export function andelFraVekt(vekt, tara, netto) {
+  if (!(vekt > 0) || tara == null || !(netto > 0)) return null;
+  return Math.min(1, Math.max(0, (vekt - Number(tara)) / Number(netto)));
+}
+export const nettoAv = (mengde, enhet) => (enhet === 'g' || enhet === 'ml') && mengde > 0 ? Number(mengde) : null;

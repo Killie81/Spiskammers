@@ -31,7 +31,8 @@ Svar KUN med ett JSON-objekt:
  "ean": 8 eller 13 siffer eller null, "pakning_mengde": tall for hele pakningens innhold eller null, "pakning_enhet": "ml", "g" eller "stk",
  "andel_igjen": 0 til 1 avrundet til nærmeste 0,05 (1 = full/uåpnet) eller null, "holdbarhet": "ÅÅÅÅ-MM-DD" eller null,
  "dato_type": "best_for", "siste_forbruksdag" eller null, "lagringssted": en av ${STEDER}, "sikkerhet": "lav", "middels" eller "hoy",
- "alternativer": liste med inntil 2 andre varer det kan være}`;
+ "alternativer": liste med inntil 2 andre varer det kan være,
+ "vekt_g": står varen på en kjøkkenvekt, tallet på displayet i gram (kg ganges med 1000), ellers null}`;
 }
 
 function promptUttak(ean: string | null, kandidater: Kandidat[]) {
@@ -47,7 +48,8 @@ Anslå også hvor mye som er igjen i pakningen på bildet.
 Svar KUN med ett JSON-objekt:
 {"pakning_id": id fra listen eller null hvis varen ikke finnes på lager, "vare": kort norsk navn på det du ser,
  "andel_igjen": 0 til 1 avrundet til nærmeste 0,05 eller null hvis det ikke kan sees, "grunnlag_mengde": én kort setning,
- "sikkerhet": "lav", "middels" eller "hoy", "alternative_ider": inntil 2 andre id-er fra listen det kan være}`;
+ "sikkerhet": "lav", "middels" eller "hoy", "alternative_ider": inntil 2 andre id-er fra listen det kan være,
+ "vekt_g": står varen på en kjøkkenvekt, tallet på displayet i gram (kg ganges med 1000), ellers null}`;
 }
 
 function promptKvittering() {

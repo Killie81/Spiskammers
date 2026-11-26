@@ -36,6 +36,23 @@ export default function Mer({ husstand, setHusstand, vis }) {
   }
   const ukeNavn = (u, i) => i === 0 ? 'Denne uka' : i === 1 ? 'Forrige uke' : `Uke fra ${new Date(u).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' })}`;
 
+  // Standardbeholdere (krydderglass o.l.) med fast tomvekt.
+  const [beholdere, setBeholdere] = useState([]);
+  const [ny, setNy] = useState({ navn: '', vekt: '' });
+  const lastBeholdere = () => supabase.from('beholder').select('id, navn, vekt_g').order('navn').then(({ data }) => setBeholdere(data || []));
+  useEffect(() => { lastBeholdere(); }, []);
+  async function lagreBeholder(navn, vekt) {
+    if (!navn.trim() || !(Number(vekt) > 0)) { vis('Beholderen trenger navn og vekt'); return; }
+    const { error } = await supabase.rpc('lagre_beholder', { p_navn: navn.trim(), p_vekt_g: Number(vekt) });
+    if (error) { vis(error.message); return; }
+    setNy({ navn: '', vekt: '' }); lastBeholdere(); vis(`${navn.trim()} lagret`);
+  }
+  async function slettBeholder(b) {
+    const { error } = await supabase.from('beholder').delete().eq('id', b.id);
+    if (error) { vis(error.message); return; }
+    lastBeholdere(); vis(`${b.navn} slettet`);
+  }
+
   async function lagreGlass() {
     const ml = parseInt(glass, 10);
     if (!(ml > 0)) { vis('Glasset må være over 0 ml'); return; }
@@ -58,6 +75,25 @@ export default function Mer({ husstand, setHusstand, vis }) {
             <button type="button" className="primær" onClick={lagreGlass}>Lagre</button></div>
         </label>
         <button type="button" className="lenke" onClick={() => supabase.auth.signOut()}>Logg ut</button>
+      </div>
+      <div className="kort skjema">
+        <h2>Standardbeholdere</h2>
+        <p className="dempet">Beholdere dere bruker til mange forskjellige varer, som krydderglass eller oppbevaringsbokser. Vekten av den tomme beholderen trekkes fra når varen veies.</p>
+        <ul className="beholderliste">
+          {beholdere.map((b) => (
+            <li key={b.id}>
+              <span><b>{b.navn}</b></span>
+              <span className="dempet">{Math.round(b.vekt_g)} g</span>
+              <button type="button" className="lenke" onClick={() => slettBeholder(b)}>Slett</button>
+            </li>
+          ))}
+          {!beholdere.length && <li className="dempet">Ingen ennå.</li>}
+        </ul>
+        <form className="ny-beholder" onSubmit={(e) => { e.preventDefault(); lagreBeholder(ny.navn, ny.vekt); }}>
+          <input placeholder="Navn, f.eks. Krydderglass" value={ny.navn} onChange={(e) => setNy({ ...ny, navn: e.target.value })} aria-label="Navn på beholder" />
+          <input placeholder="Tom vekt (g)" inputMode="decimal" value={ny.vekt} onChange={(e) => setNy({ ...ny, vekt: e.target.value.replace(',', '.') })} aria-label="Tom vekt i gram" />
+          <button type="submit" className="primær">Legg til</button>
+        </form>
       </div>
       <div className="kort skjema">
         <h2>Unormale uker</h2>

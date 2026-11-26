@@ -167,6 +167,29 @@ input, select { min-height: 52px; padding: 10px 14px; font-size: 17px; font-weig
 .teller button { width: 60px; height: 60px; border-radius: 16px; border: 1px solid var(--line); background: var(--flate); font-size: 28px; font-weight: 500; }
 .teller b { font-size: 32px; font-weight: 800; min-width: 2ch; text-align: center; font-variant-numeric: tabular-nums; }
 
+/* Prosent og vekt */
+.prosentvelger { display: grid; gap: 10px; }
+.prosent-hode { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.prosent-hode b { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.prosentvelger input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 10px; min-height: 0; padding: 0; border: 0; border-radius: 5px;
+  background: linear-gradient(to right, var(--fjord) var(--p), var(--flate-2) var(--p)); }
+.prosentvelger input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 30px; height: 30px; border-radius: 50%; background: var(--flate); border: 2px solid var(--fjord); box-shadow: var(--skygge); }
+.prosentvelger input[type=range]::-moz-range-thumb { width: 28px; height: 28px; border-radius: 50%; background: var(--flate); border: 2px solid var(--fjord); }
+.prosentvelger .valg button:not(.primær):not(.lenke) { flex: 1 1 0; min-width: 0; padding: 0 8px; }
+.vektboks { display: grid; gap: 12px; padding: 14px; border-radius: 14px; background: var(--flate-2); }
+.vektboks input, .vektboks select { background: var(--flate); }
+.vektsvar { margin: 0; padding: 10px 14px; border-radius: 12px; background: var(--fjord-svak); color: var(--fjord); font-weight: 600; }
+.vektsvar b { font-weight: 800; }
+.bryter.liten { margin: 0; }
+.bryter.liten button { min-height: 42px; font-size: 14px; }
+.egen-prosent { display: grid; gap: 12px; }
+.egen-prosent[open] { padding-bottom: 4px; }
+.primær.stor.veid { background: var(--fjord); box-shadow: 0 0 0 3px var(--fjord-svak); }
+.beholderliste { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.beholderliste li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 12px; min-height: 48px; padding: 0 4px 0 14px; border-radius: 12px; border: 1px solid var(--line); }
+.ny-beholder { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto; gap: 8px; }
+@media (max-width: 600px) { .ny-beholder { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .ny-beholder .primær { grid-column: 1 / -1; } }
+
 /* Kvittering */
 .kvittering .hode { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 14px; }
 .linjer { display: grid; gap: 8px; }
