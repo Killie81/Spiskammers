@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { hentLager, rpc } from '../supabase.js';
-import { stedNavn, prosent, dagerIgjen } from '../format.js';
+import { stedNavn, prosent, dagerIgjen, grupper } from '../format.js';
 import { Restbar, Holdbar } from '../deler/Rest.jsx';
 import UttakBekreft from '../deler/UttakBekreft.jsx';
 import Ikon, { StedMerke } from '../deler/Ikon.jsx';
@@ -19,7 +19,7 @@ export default function Lager({ husstand, vis, startSted = 'alle' }) {
   if (!lager) return <p className="midt"><span className="spinn" /></p>;
 
   const snart = lager.filter((p) => { const d = dagerIgjen(p.holdbarhet); return d != null && d <= 2; });
-  const vist = lager
+  const vist = grupper(lager)
     .filter((p) => sted === 'alle' || p.sted === sted)
     .filter((p) => !søk.trim() || `${p.navn} ${p.merke || ''}`.toLowerCase().includes(søk.trim().toLowerCase()));
 
@@ -27,8 +27,9 @@ export default function Lager({ husstand, vis, startSted = 'alle' }) {
 
   async function flytt(til) {
     try {
-      await rpc('flytt_pakning', { p_pakning: åpen.id, p_sted: til });
-      vis(`${åpen.navn} flyttet til ${stedNavn(til)}`);
+      // En sammenslått linje flyttes samlet.
+      for (const p of åpen.pakninger || [åpen]) await rpc('flytt_pakning', { p_pakning: p.id, p_sted: til });
+      vis(`${åpen.antall > 1 ? `${åpen.antall} × ` : ''}${åpen.navn} flyttet til ${stedNavn(til)}`);
       lukk();
     } catch (e) { vis(`Kunne ikke flytte: ${e.message}`); }
   }
@@ -50,7 +51,7 @@ export default function Lager({ husstand, vis, startSted = 'alle' }) {
             <UttakBekreft pakning={åpen} foto={null} husstand={husstand} metode="manuelt" vis={vis} onFerdig={lukk} onAvbryt={() => setHandling(null)} />
           ) : (
             <div className="kort">
-              <h2>{åpen.navn}</h2>
+              <h2>{åpen.navn}{åpen.antall > 1 && <span className="antall"> · {åpen.antall} stk</span>}</h2>
               <p className="dempet">{stedNavn(åpen.sted)} · {prosent(åpen.andel)} igjen · <Holdbar dato={åpen.holdbarhet} type={åpen.dato_type} /></p>
               {handling === 'flytt' ? (
                 <>
@@ -60,8 +61,8 @@ export default function Lager({ husstand, vis, startSted = 'alle' }) {
                 </>
               ) : (
                 <div className="valg">
-                  <button type="button" className="primær" onClick={() => setHandling('uttak')}>Ta ut</button>
-                  <button type="button" onClick={() => setHandling('flytt')}>Flytt</button>
+                  <button type="button" className="primær" onClick={() => setHandling('uttak')}>{åpen.antall > 1 ? 'Ta ut én' : 'Ta ut'}</button>
+                  <button type="button" onClick={() => setHandling('flytt')}>{åpen.antall > 1 ? `Flytt alle ${åpen.antall}` : 'Flytt'}</button>
                   <button type="button" className="lenke" onClick={lukk}>Lukk</button>
                 </div>
               )}
@@ -75,7 +76,7 @@ export default function Lager({ husstand, vis, startSted = 'alle' }) {
           <li key={p.id}>
             <button type="button" onClick={() => { setÅpen(p); setHandling(null); }}>
               <StedMerke sted={p.sted} />
-              <span className="navn"><b>{p.navn}</b><small className="dempet">{[p.merke, stedNavn(p.sted)].filter(Boolean).join(' · ')}</small></span>
+              <span className="navn"><b>{p.navn}{p.antall > 1 && <span className="antall"> · {p.antall} stk</span>}</b><small className="dempet">{[p.merke, stedNavn(p.sted)].filter(Boolean).join(' · ')}</small></span>
               <span className="rest"><Restbar andel={Number(p.andel)} /><small className="dempet">{prosent(p.andel)}</small></span>
               <Holdbar dato={p.holdbarhet} type={p.dato_type} />
             </button>

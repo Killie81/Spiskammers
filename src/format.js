@@ -39,3 +39,22 @@ export function glassAndel(pakningMengde, enhet, glassMl) {
   if (enhet !== 'ml' || !pakningMengde) return null;
   return glassMl / pakningMengde;
 }
+
+// Slå sammen like, uåpnede pakninger av samme vare på samme sted til én linje («Jasminris · 8 stk»)
+// når de har samme holdbarhet, eller når holdbarheten er mer enn to uker unna. Åpnede pakninger vises alltid hver for seg.
+export function grupper(lager) {
+  const grupper = new Map();
+  for (const p of lager) {
+    const d = dagerIgjen(p.holdbarhet);
+    const datonøkkel = Number(p.andel) < 1 ? `åpnet-${p.id}` : d == null || d > 14 ? 'lang' : p.holdbarhet;
+    const nøkkel = `${p.produkt_id}|${p.sted}|${datonøkkel}`;
+    const g = grupper.get(nøkkel);
+    if (g) g.pakninger.push(p);
+    else grupper.set(nøkkel, { nøkkel, pakninger: [p] });
+  }
+  return [...grupper.values()].map((g) => {
+    // Den som går ut først representerer gruppen, og er den som tas ut først.
+    g.pakninger.sort((a, b) => (dagerIgjen(a.holdbarhet) ?? 99999) - (dagerIgjen(b.holdbarhet) ?? 99999));
+    return { ...g.pakninger[0], antall: g.pakninger.length, pakninger: g.pakninger, nøkkel: g.nøkkel };
+  });
+}
