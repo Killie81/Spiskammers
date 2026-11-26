@@ -184,6 +184,70 @@ input, select { min-height: 52px; padding: 10px 14px; font-size: 17px; font-weig
 details { margin-top: 14px; }
 summary { min-height: 48px; display: flex; align-items: center; color: var(--soft); font-weight: 600; cursor: pointer; }
 
+/* Handleliste */
+.handleliste { display: grid; gap: 16px; }
+.handle-hode { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px; }
+.handle-hode .dato { margin: 0 0 4px; color: var(--soft); font-weight: 600; }
+.handle-hode .dato::first-letter { text-transform: uppercase; }
+.sekundær.liten { min-height: 46px; font-size: 15px; }
+.sekundær:disabled { opacity: .5; }
+.legg-til { display: flex; gap: 8px; align-items: center; }
+.legg-til input { flex: 1; }
+.legg-til .primær { width: 56px; padding: 0; flex: none; }
+.teller.liten { gap: 6px; flex: none; }
+.teller.liten button { width: 42px; height: 42px; border-radius: 12px; font-size: 22px; }
+.teller.liten b { font-size: 18px; min-width: 1.5ch; }
+.harvi { display: grid; gap: 8px; padding: 14px 16px; border-radius: 14px; background: var(--rav-svak); }
+.harvi .valg button:not(.lenke) { min-height: 46px; font-size: 15px; }
+.tur-knapp { min-height: 96px; border: 0; width: 100%; font: inherit; text-align: left; }
+.tur-knapp .knapp-ikon { width: 56px; height: 56px; }
+.tur-knapp .knapp-tekst > span { font-size: 21px; }
+.avdeling { display: grid; gap: 8px; }
+.avdeling h3 { margin: 6px 0 0; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--soft); }
+.hliste { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.hrad { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: stretch; border-radius: 14px; border: 1px solid var(--line); background: var(--flate); overflow: hidden; }
+.hrad-hoved { display: flex; align-items: center; gap: 14px; min-height: 60px; padding: 10px 14px; border: 0; background: none; text-align: left; }
+.sjekkboks { flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--line); color: var(--fjord-ink); transition: background .15s, border-color .15s; }
+.hrad.tatt .sjekkboks { background: var(--fjord); border-color: var(--fjord); }
+.hrad.tatt .hrad-tekst b { text-decoration: line-through; color: var(--soft); }
+.hrad-tekst { display: grid; flex: 1; }
+.hrad-tekst b { font-weight: 700; }
+.hrad-tekst small { font-size: 13px; color: var(--soft); }
+.kilde { flex: none; display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: var(--flate-2); color: var(--soft); }
+.kilde-forslag { background: var(--fjord-svak); color: var(--fjord); }
+.kilde-fast { background: var(--rav-svak); color: var(--rav); }
+.hrad-mer { width: 48px; border: 0; border-left: 1px solid var(--line); background: none; color: var(--soft); }
+.hrad-valg { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 14px; border-top: 1px solid var(--line); background: var(--flate-2); }
+.hrad-valg select { width: auto; min-height: 44px; font-size: 15px; }
+.hrad-valg > button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--flate); font-weight: 600; font-size: 15px; }
+.hrad-valg > button.på { background: var(--rav-svak); color: var(--rav); border-color: transparent; }
+.hrad-valg > button.kastet { color: var(--lyng); }
+.flagget { border-color: color-mix(in srgb, var(--lyng) 45%, var(--line)); }
+.flagliste { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 10px; }
+.flagliste li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.flagliste .valg button:not(.lenke) { min-height: 44px; font-size: 15px; padding: 0 14px; }
+.banner.rolig { background: var(--fjord-svak); color: var(--fjord); flex-wrap: wrap; }
+.banner.rolig .primær { min-height: 46px; margin-left: auto; }
+.handletur { position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; background: var(--bg); }
+.handletur header { display: flex; align-items: center; gap: 12px; padding: calc(10px + env(safe-area-inset-top)) 16px 10px; border-bottom: 1px solid var(--line); background: var(--flate); }
+.handletur header .primær { min-height: 48px; }
+.fremdrift { flex: 1; display: grid; gap: 6px; text-align: center; font-size: 14px; }
+.fremdrift .spor { height: 8px; border-radius: 4px; background: var(--flate-2); overflow: hidden; }
+.fremdrift .spor span { display: block; height: 100%; border-radius: 4px; background: var(--fjord); transition: width .2s; }
+.tur-innhold { flex: 1; overflow-y: auto; padding: 12px 16px calc(24px + env(safe-area-inset-bottom)); display: grid; gap: 14px; align-content: start; }
+.hrad.stor .hrad-hoved { min-height: 72px; gap: 16px; }
+.hrad.stor .sjekkboks { width: 38px; height: 38px; }
+.hrad.stor .hrad-tekst b { font-size: 20px; }
+.i-kurven { opacity: .7; }
+.midt-tekst { text-align: center; }
+.ukeliste { display: grid; gap: 8px; }
+.ukeliste button { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 10px; min-height: 52px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--flate); font-weight: 600; text-align: left; }
+.ukeliste small { color: var(--soft); font-weight: 600; min-width: 6ch; text-align: right; }
+.bryterpille { width: 40px; height: 24px; border-radius: 12px; background: var(--flate-2); position: relative; transition: background .15s; }
+.bryterpille::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--flate); box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: left .15s; }
+.ukeliste button.på .bryterpille { background: var(--rav); }
+.ukeliste button.på .bryterpille::after { left: 19px; }
+
 /* Lager */
 .liste { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .liste button { width: 100%; display: grid; grid-template-columns: auto minmax(0, 1fr) 150px 140px; gap: 16px; align-items: center; text-align: left;
@@ -205,7 +269,9 @@ summary { min-height: 48px; display: flex; align-items: center; color: var(--sof
 .tallkort .ikon { color: var(--fjord); margin-bottom: 6px; }
 .tallkort b { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .tallkort span { font-size: 14px; font-weight: 500; }
-.mer .skjema { max-width: 480px; }
+.mer { display: grid; gap: 16px; }
+.mer .tall { margin-bottom: 0; }
+.mer .skjema { max-width: 560px; }
 .glassrad { display: flex; gap: 10px; }
 .glassrad input { flex: 1; }
 .mer .lenke { justify-self: start; padding: 0; }
@@ -218,7 +284,7 @@ summary { min-height: 48px; display: flex; align-items: center; color: var(--sof
 
 @media (max-width: 820px) {
   .faner button span { display: none; }
-  .faner button { padding: 0 16px; }
+  .faner button { padding: 0 14px; }
   .liste button { grid-template-columns: auto minmax(0, 1fr) auto; }
   .liste .rest { grid-column: 2; }
   .liste .frist { grid-column: 3; grid-row: 1; }
@@ -230,6 +296,10 @@ summary { min-height: 48px; display: flex; align-items: center; color: var(--sof
   .merke { display: none; }
   .faner { flex: 1; justify-content: space-between; background: transparent; padding: 0; gap: 2px; }
   .faner button { flex: 1; flex-direction: column; gap: 2px; min-height: 58px; padding: 6px 0 4px; font-size: 11px; font-weight: 700; }
+  .hrad-hoved { gap: 10px; padding: 10px 12px; }
+  .kilde { display: none; }
+  .hrad .kilde-fast { display: inline-flex; padding: 3px 6px; font-size: 0; gap: 0; }
+  .legg-til .teller.liten button { width: 38px; height: 38px; }
   .faner button span { display: inline; }
   .faner button.på { background: var(--fjord-svak); color: var(--fjord); box-shadow: none; }
   .innhold { padding: calc(16px + env(safe-area-inset-top)) 16px calc(110px + env(safe-area-inset-bottom)); }

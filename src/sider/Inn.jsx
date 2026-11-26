@@ -10,8 +10,8 @@ import StedVelger from '../deler/StedVelger.jsx';
 const TOM = { vare: '', merke: '', ean: '', kategori: 'annet', pakning_mengde: '', pakning_enhet: 'stk', andel: 1, holdbarhet: '', dato_type: 'best_for', lagringssted: 'kjoleskap', antall: 1 };
 const ANDELER = [[1, '1/1 full'], [0.75, '¾'], [0.5, '½'], [0.25, '¼']];
 
-export default function Inn({ husstand, vis }) {
-  const [modus, setModus] = useState('vare');
+export default function Inn({ husstand, vis, gåTil, startModus = 'vare' }) {
+  const [modus, setModus] = useState(startModus);
   const [fase, setFase] = useState('start'); // start | leser | skjema
   const [v, setV] = useState(TOM);
   const [bilde, setBilde] = useState(null);
@@ -87,7 +87,7 @@ export default function Inn({ husstand, vis }) {
         <button type="button" className={modus === 'kvittering' ? 'på' : ''} onClick={() => setModus('kvittering')}><Ikon navn="kvittering" størrelse={18} /> Kvittering</button>
       </div>
 
-      {modus === 'kvittering' && <Kvittering husstand={husstand} vis={vis} />}
+      {modus === 'kvittering' && <Kvittering husstand={husstand} vis={vis} gåTil={gåTil} />}
 
       {modus === 'vare' && fase === 'start' && (
         <div className="kolonne">

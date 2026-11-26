@@ -4,7 +4,7 @@ import { krympBilde, tilBase64 } from '../bilde.js';
 import { STEDER, kr, leggTilDager, idag } from '../format.js';
 import Fotoknapp from '../deler/Fotoknapp.jsx';
 
-export default function Kvittering({ husstand, vis }) {
+export default function Kvittering({ husstand, vis, gåTil }) {
   const [fase, setFase] = useState('start'); // start | leser | liste
   const [k, setK] = useState(null);
   const [linjer, setLinjer] = useState([]);
@@ -68,8 +68,14 @@ export default function Kvittering({ husstand, vis }) {
         const { error: e2 } = await supabase.from('utgift').insert(utgifter);
         if (e2) throw new Error(e2.message);
       }
-      vis(`${n} pakninger lagt inn fra ${k.butikk || 'kvitteringen'}`);
+      // Avstem handlelisten mot det som faktisk ble kjøpt.
+      let avstemt = null;
+      try { avstemt = await rpc('avstem_handleliste', { p_kvittering: kv.id }); } catch { /* listen kan avstemmes senere */ }
+      const tekst = avstemt && (avstemt.kjopt || avstemt.flagget)
+        ? ` · handlelisten: ${avstemt.kjopt} kjøpt${avstemt.flagget ? `, ${avstemt.flagget} må sjekkes` : ''}` : '';
+      vis(`${n} pakninger lagt inn fra ${k.butikk || 'kvitteringen'}${tekst}`);
       nullstill();
+      if (avstemt?.flagget && gåTil) gåTil('handle');
     } catch (e) {
       vis(`Kunne ikke lagre: ${e.message}`);
     }
