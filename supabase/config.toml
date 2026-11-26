@@ -1,0 +1,4 @@
+# Serverfunksjonen sjekker selv at brukeren er innlogget (se index.ts),
+# derfor er plattformens gamle JWT-sjekk slått av.
+[functions.claude]
+verify_jwt = false

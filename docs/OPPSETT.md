@@ -26,11 +26,11 @@ API-nøkler og passord limes inn direkte hos tjenestene. De skal aldri sendes i 
 6. **Serverfunksjonen:** gå til **Edge Functions → Deploy a new function → Via Editor**.
    - Navn: `claude`, med små bokstaver
    - Slett eksempelkoden og lim inn hele `supabase/functions/claude/index.ts` fra repoet
-   - La **Verify JWT** stå på
-   - Trykk **Deploy**
+   - Trykk **Deploy function**
+   - Under **Settings** for funksjonen: slå **av** «Verify JWT with legacy secret» og lagre. Funksjonen sjekker selv at brukeren er innlogget.
 7. **Adressene til appen:** gå til **Project Settings → API**, eventuelt **Data API** og **API Keys**. Ta vare på to verdier til steg 3:
    - **Project URL**, f.eks. `https://abcd1234.supabase.co`
-   - **anon public**-nøkkelen. Den er laget for å ligge i appen og er ikke hemmelig.
+   - **Publishable key** (eller **anon public** i eldre prosjekter). Den er laget for å ligge i appen og er ikke hemmelig.
 
 ## 3. Vercel – publisering av appen
 
@@ -38,7 +38,7 @@ API-nøkler og passord limes inn direkte hos tjenestene. De skal aldri sendes i 
 2. Velg **Add New → Project** og importer **Spiskammers**. Hvis repoet ikke vises, trykker du **Adjust GitHub App Permissions** og gir tilgang til Spiskammers.
 3. Framework settes automatisk til **Vite**. Under **Environment Variables** legger du inn:
    - `VITE_SUPABASE_URL` = Project URL fra steg 2.7
-   - `VITE_SUPABASE_ANON_KEY` = anon public-nøkkelen fra steg 2.7
+   - `VITE_SUPABASE_ANON_KEY` = publishable-nøkkelen fra steg 2.7
 4. Trykk **Deploy**. Etter et minutt får du en adresse, f.eks. `spiskammers.vercel.app`.
 
 Hver gang ny kode legges i hovedgrenen (`main`), publiserer Vercel den automatisk.

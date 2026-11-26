@@ -1,6 +1,9 @@
 // Spiskammers – serverfunksjon som kaller Claude.
 // API-nøkkelen ligger som hemmelighet (ANTHROPIC_API_KEY) i Supabase, aldri i appen.
 // Moduser: "vare" (registrering inn), "uttak" (match mot lager + rest), "kvittering".
+// Bare innloggede brukere slipper gjennom: den offentlige app-nøkkelen alene er ikke nok.
+
+import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -64,6 +67,18 @@ Svar KUN med ett JSON-objekt:
  "type": "mat", "pant", "pose" eller "ikke_mat", "lagringssted": en av ${STEDER}, "holdbarhet_dager": heltall eller null, "sikker": true eller false}]}`;
 }
 
+// Supabase gir funksjonen prosjektets offentlige nøkkel, enten som gammel anon-nøkkel eller ny publishable-nøkkel.
+function offentligNøkkel(): string {
+  const anon = Deno.env.get("SUPABASE_ANON_KEY");
+  if (anon) return anon;
+  try {
+    const v = JSON.parse(Deno.env.get("SUPABASE_PUBLISHABLE_KEYS") ?? "{}");
+    return String(Object.values(v)[0] ?? "");
+  } catch {
+    return "";
+  }
+}
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...CORS, "Content-Type": "application/json" } });
 }
@@ -71,6 +86,11 @@ function json(body: unknown, status = 200) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ feil: "Bruk POST" }, 405);
+
+  const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+  const sb = createClient(Deno.env.get("SUPABASE_URL")!, offentligNøkkel(), { auth: { persistSession: false } });
+  const { data: bruker, error: authFeil } = await sb.auth.getUser(token);
+  if (authFeil || !bruker?.user) return json({ feil: "Ikke innlogget" }, 401);
 
   const key = Deno.env.get("ANTHROPIC_API_KEY");
   if (!key) return json({ feil: "ANTHROPIC_API_KEY mangler i Supabase" }, 500);
