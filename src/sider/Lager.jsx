@@ -1,0 +1,92 @@
+import { useEffect, useState } from 'react';
+import { hentLager, rpc } from '../supabase.js';
+import { STEDER, stedNavn, prosent, dagerIgjen } from '../format.js';
+import { Restbar, Holdbar } from '../deler/Rest.jsx';
+import UttakBekreft from '../deler/UttakBekreft.jsx';
+
+export default function Lager({ husstand, vis }) {
+  const [lager, setLager] = useState(null);
+  const [sted, setSted] = useState('alle');
+  const [søk, setSøk] = useState('');
+  const [åpen, setÅpen] = useState(null);
+  const [handling, setHandling] = useState(null); // uttak | flytt
+
+  const last = () => hentLager().then(setLager).catch((e) => vis(e.message));
+  useEffect(() => { last(); }, []);
+
+  if (!lager) return <p className="midt"><span className="spinn" /></p>;
+
+  const snart = lager.filter((p) => { const d = dagerIgjen(p.holdbarhet); return d != null && d <= 2; });
+  const vist = lager
+    .filter((p) => sted === 'alle' || p.sted === sted)
+    .filter((p) => !søk.trim() || `${p.navn} ${p.merke || ''}`.toLowerCase().includes(søk.trim().toLowerCase()));
+
+  const lukk = () => { setÅpen(null); setHandling(null); last(); };
+
+  async function flytt(til) {
+    try {
+      await rpc('flytt_pakning', { p_pakning: åpen.id, p_sted: til });
+      vis(`${åpen.navn} flyttet til ${stedNavn(til)}`);
+      lukk();
+    } catch (e) { vis(`Kunne ikke flytte: ${e.message}`); }
+  }
+
+  return (
+    <section className="lager">
+      {snart.length > 0 && (
+        <div className="kort advarsel">
+          <b>{snart.length} {snart.length === 1 ? 'vare går' : 'varer går'} ut innen to dager:</b> {snart.map((p) => p.navn).join(', ')}
+        </div>
+      )}
+      <div className="bryter">
+        <button type="button" className={sted === 'alle' ? 'på' : ''} onClick={() => setSted('alle')}>Alle ({lager.length})</button>
+        {STEDER.map(([id, navn]) => (
+          <button key={id} type="button" className={sted === id ? 'på' : ''} onClick={() => setSted(id)}>
+            {navn} ({lager.filter((p) => p.sted === id).length})
+          </button>
+        ))}
+      </div>
+      <input className="søk" type="search" placeholder="Søk …" value={søk} onChange={(e) => setSøk(e.target.value)} />
+
+      {åpen && (
+        <div className="ark" role="dialog" aria-label={åpen.navn}>
+          {handling === 'uttak' ? (
+            <UttakBekreft pakning={åpen} foto={null} husstand={husstand} metode="manuelt" vis={vis} onFerdig={lukk} onAvbryt={() => setHandling(null)} />
+          ) : (
+            <div className="kort">
+              <h2>{åpen.navn}</h2>
+              <p className="dempet">{stedNavn(åpen.sted)} · {prosent(åpen.andel)} igjen · <Holdbar dato={åpen.holdbarhet} type={åpen.dato_type} /></p>
+              {handling === 'flytt' ? (
+                <div className="valg">
+                  {STEDER.filter(([id]) => id !== åpen.sted).map(([id, navn]) => (
+                    <button key={id} type="button" onClick={() => flytt(id)}>{navn}</button>
+                  ))}
+                  <button type="button" className="lenke" onClick={() => setHandling(null)}>Tilbake</button>
+                </div>
+              ) : (
+                <div className="valg">
+                  <button type="button" className="primær" onClick={() => setHandling('uttak')}>Ta ut</button>
+                  <button type="button" onClick={() => setHandling('flytt')}>Flytt</button>
+                  <button type="button" className="lenke" onClick={lukk}>Lukk</button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      <ul className="liste">
+        {vist.map((p) => (
+          <li key={p.id}>
+            <button type="button" onClick={() => { setÅpen(p); setHandling(null); }}>
+              <span className="navn"><b>{p.navn}</b>{sted === 'alle' && <small className="dempet"> · {stedNavn(p.sted)}</small>}</span>
+              <Restbar andel={Number(p.andel)} />
+              <Holdbar dato={p.holdbarhet} type={p.dato_type} />
+            </button>
+          </li>
+        ))}
+        {!vist.length && <li className="dempet tom">Ingenting her.</li>}
+      </ul>
+    </section>
+  );
+}
