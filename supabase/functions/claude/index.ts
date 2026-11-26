@@ -32,7 +32,9 @@ Svar KUN med ett JSON-objekt:
  "andel_igjen": 0 til 1 avrundet til nærmeste 0,05 (1 = full/uåpnet) eller null, "holdbarhet": "ÅÅÅÅ-MM-DD" eller null,
  "dato_type": "best_for", "siste_forbruksdag" eller null, "lagringssted": en av ${STEDER}, "sikkerhet": "lav", "middels" eller "hoy",
  "alternativer": liste med inntil 2 andre varer det kan være,
- "vekt_g": står varen på en kjøkkenvekt, tallet på displayet i gram (kg ganges med 1000), ellers null}`;
+ "vekt_g": står varen på en kjøkkenvekt, tallet på displayet i gram (kg ganges med 1000), ellers null,
+ "stykkvis": true for frukt og grønt som brukes ett og ett stykk (bananer, appelsiner, klementiner, epler, pærer, kiwi, avokado, sitroner o.l.), ellers false,
+ "antall_stk": for stykkvarer antall stykker på bildet, ellers null}`;
 }
 
 function promptUttak(ean: string | null, kandidater: Kandidat[]) {
@@ -49,7 +51,8 @@ Svar KUN med ett JSON-objekt:
 {"pakning_id": id fra listen eller null hvis varen ikke finnes på lager, "vare": kort norsk navn på det du ser,
  "andel_igjen": 0 til 1 avrundet til nærmeste 0,05 eller null hvis det ikke kan sees, "grunnlag_mengde": én kort setning,
  "sikkerhet": "lav", "middels" eller "hoy", "alternative_ider": inntil 2 andre id-er fra listen det kan være,
- "vekt_g": står varen på en kjøkkenvekt, tallet på displayet i gram (kg ganges med 1000), ellers null}`;
+ "vekt_g": står varen på en kjøkkenvekt, tallet på displayet i gram (kg ganges med 1000), ellers null,
+ "antall_stk": er varen frukt o.l. som telles i stk, antall stykker på bildet, ellers null}`;
 }
 
 function promptKvittering() {
@@ -59,14 +62,16 @@ Regler:
 - Én linje per vare. Står samme vare flere ganger, slå dem sammen og øk antall.
 - Rabatter, kampanjer og "x for y" trekkes fra prisen på varen de gjelder og er ikke egne linjer.
 - Pant, bæreposer og varer som ikke er mat eller drikke tas med, men merkes med riktig type.
-- Løsvekt (frukt, grønt, ost i disk) får antall 1 og vekten som pakning_mengde i g.
+- Stykkvarer: frukt og grønt som brukes ett og ett stykk (bananer, appelsiner, klementiner, epler, pærer, kiwi, avokado, sitroner o.l.) får stykkvis true, antall = antall stykker, pakning_mengde 1 og pakning_enhet "stk".
+  Er de kjøpt i løsvekt eller nett, anslå antall stykker fra vekten (banan ca. 180 g, eple og pære ca. 180 g, appelsin ca. 200 g, klementin ca. 70 g, kiwi ca. 90 g, avokado ca. 200 g, sitron ca. 120 g).
+- Annen løsvekt (grønnsaker, ost i disk) får antall 1 og vekten som pakning_mengde i g.
 - Anslå typisk holdbarhet i dager fra kjøp for hver matvare.
 - Er du usikker på en forkortelse, gjett beste vare og sett sikker til false.
 Svar KUN med ett JSON-objekt:
 {"butikk": streng eller null, "dato": "ÅÅÅÅ-MM-DD" eller null, "total": tall eller null,
  "linjer": [{"tekst": teksten på kvitteringen, "vare": kort norsk varenavn, "kategori": en av ${KATEGORIER}, "antall": heltall,
  "pakning_mengde": tall eller null, "pakning_enhet": "ml", "g" eller "stk", "pris": linjens totalpris etter rabatt,
- "type": "mat", "pant", "pose" eller "ikke_mat", "lagringssted": en av ${STEDER}, "holdbarhet_dager": heltall eller null, "sikker": true eller false}]}`;
+ "type": "mat", "pant", "pose" eller "ikke_mat", "lagringssted": en av ${STEDER}, "holdbarhet_dager": heltall eller null, "stykkvis": true eller false, "sikker": true eller false}]}`;
 }
 
 // Supabase gir funksjonen prosjektets offentlige nøkkel, enten som gammel anon-nøkkel eller ny publishable-nøkkel.

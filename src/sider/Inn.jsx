@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import { supabase, rpc, spørClaude, lastOppBilde } from '../supabase.js';
 import { krympBilde, lesStrekkode, tilBase64 } from '../bilde.js';
-import { holdbarTekst, kr, leggTilDager, andelFraVekt, nettoAv } from '../format.js';
+import { holdbarTekst, kr, leggTilDager, andelFraVekt, nettoAv, gjettStykkvis } from '../format.js';
 import Fotoknapp from '../deler/Fotoknapp.jsx';
 import Kvittering from './Kvittering.jsx';
 import Ikon from '../deler/Ikon.jsx';
 import StedVelger from '../deler/StedVelger.jsx';
 import ProsentVelger from '../deler/ProsentVelger.jsx';
 
-const TOM = { vare: '', merke: '', ean: '', kategori: 'annet', pakning_mengde: '', pakning_enhet: 'stk', andel: 1, holdbarhet: '', dato_type: 'best_for', lagringssted: 'kjoleskap', antall: 1 };
+const TOM = { vare: '', merke: '', ean: '', kategori: 'annet', pakning_mengde: '', pakning_enhet: 'stk', andel: 1, holdbarhet: '', dato_type: 'best_for', lagringssted: 'kjoleskap', antall: 1, stykkvis: false };
 
 export default function Inn({ husstand, vis, gåTil, startModus = 'vare' }) {
   const [modus, setModus] = useState(startModus);
@@ -67,6 +67,7 @@ export default function Inn({ husstand, vis, gåTil, startModus = 'vare' }) {
         ...TOM, vare: r.vare || '', merke: r.merke || '', ean: ean || r.ean || '', kategori: r.kategori || 'annet',
         pakning_mengde: r.pakning_mengde ?? '', pakning_enhet: r.pakning_enhet || 'stk', andel: andel >= 0.95 ? 1 : andel,
         holdbarhet: dato, dato_type: r.dato_type || 'best_for', lagringssted: r.lagringssted || 'kjoleskap',
+        stykkvis: Boolean(r.stykkvis) || gjettStykkvis(r.vare), antall: Math.max(1, Math.min(99, parseInt(r.antall_stk, 10) || 1)),
       });
       setFase('skjema');
     } catch (e) {
@@ -80,14 +81,15 @@ export default function Inn({ husstand, vis, gåTil, startModus = 'vare' }) {
     setLagrer(true);
     try {
       const sti = await lastOppBilde(husstand.id, blob, 'inn');
-      const veid = Number(vekt) > 0 ? Number(vekt) : null;
-      const andelInn = veid && kjentAndel != null ? kjentAndel : (veid && full && metodeIkkeFull !== 'beholder' ? 1 : v.andel);
+      const veid = !v.stykkvis && Number(vekt) > 0 ? Number(vekt) : null;
+      const andelInn = v.stykkvis ? 1 : veid && kjentAndel != null ? kjentAndel : (veid && full && metodeIkkeFull !== 'beholder' ? 1 : v.andel);
       const ider = await rpc('registrer_inn', {
         p_navn: v.vare.trim(), p_merke: v.merke || null, p_ean: v.ean || null, p_kategori: v.kategori,
-        p_mengde: v.pakning_mengde === '' ? null : Number(v.pakning_mengde), p_enhet: v.pakning_enhet, p_sted: v.lagringssted,
+        p_mengde: v.stykkvis ? 1 : v.pakning_mengde === '' ? null : Number(v.pakning_mengde), p_enhet: v.stykkvis ? 'stk' : v.pakning_enhet, p_sted: v.lagringssted,
         p_antall: v.antall, p_andel: andelInn, p_holdbarhet: v.holdbarhet || null, p_dato_type: v.holdbarhet ? v.dato_type : null,
         p_pris: null, p_kvittering: null, p_metode: blob ? (v.ean ? 'strekkode' : 'foto') : 'manuelt', p_bilde: sti,
       });
+      if (ider?.length) await rpc('sett_stykkvis', { p_pakning: ider[0], p_verdi: v.stykkvis });
       // Lær emballasjevekten fra veiingen (bare den første pakningen står på vekta).
       let info = '';
       if (veid && kjentAndel == null && full != null && ider?.length) {
@@ -101,7 +103,7 @@ export default function Inn({ husstand, vis, gåTil, startModus = 'vare' }) {
       } else if (veid && kjentAndel != null) {
         info = ` · ${Math.round(kjentAndel * 100)} % igjen (veid)`;
       }
-      vis(`${v.antall > 1 ? `${v.antall} × ` : ''}${v.vare} lagt inn${info}`);
+      vis(v.stykkvis ? `${v.antall} stk ${v.vare} lagt inn` : `${v.antall > 1 ? `${v.antall} × ` : ''}${v.vare} lagt inn${info}`);
       nullstill();
     } catch (e) {
       vis(`Kunne ikke lagre: ${e.message}`);
@@ -165,19 +167,21 @@ export default function Inn({ husstand, vis, gåTil, startModus = 'vare' }) {
         <div className="rad">
           {bilde && <div className="forhånd liten"><img src={bilde} alt="Bilde av varen" /></div>}
           <div className="kort skjema">
-            <label>Vare<input value={v.vare} onChange={(e) => sett('vare', e.target.value)} /></label>
-            <div className="to">
+            <label>Vare<input value={v.vare} onChange={(e) => { sett('vare', e.target.value); if (gjettStykkvis(e.target.value)) sett('stykkvis', true); }} /></label>
+            <label className="avkryss"><input type="checkbox" checked={v.stykkvis} onChange={(e) => sett('stykkvis', e.target.checked)} />
+              <span>Telles i stk<small>Frukt o.l. som tas ut én og én – ikke i prosent</small></span></label>
+            {!v.stykkvis && <div className="to">
               <label>Pakning<input inputMode="decimal" value={v.pakning_mengde} onChange={(e) => sett('pakning_mengde', e.target.value.replace(',', '.'))} /></label>
               <label>Enhet<select value={v.pakning_enhet} onChange={(e) => sett('pakning_enhet', e.target.value)}>
                 <option value="ml">ml</option><option value="g">g</option><option value="stk">stk</option></select></label>
-            </div>
-            <span className="etikett">Antall like pakninger</span>
+            </div>}
+            <span className="etikett">{v.stykkvis ? 'Antall stk' : 'Antall like pakninger'}</span>
             <div className="teller">
               <button type="button" aria-label="Færre" onClick={() => sett('antall', Math.max(1, v.antall - 1))}>−</button>
               <b>{v.antall}</b>
               <button type="button" aria-label="Flere" onClick={() => sett('antall', Math.min(99, v.antall + 1))}>+</button>
             </div>
-            <div className="vektboks">
+            {!v.stykkvis && <div className="vektboks">
               <label>Veid på kjøkkenvekta (g)
                 <input inputMode="decimal" placeholder="Valgfritt" value={vekt} onChange={(e) => { setVekt(e.target.value.replace(',', '.')); }} /></label>
               {veidTall && kjentAndel != null && (
@@ -219,8 +223,8 @@ export default function Inn({ husstand, vis, gåTil, startModus = 'vare' }) {
                   {forhånd && <p className="vektsvar">{forhånd}</p>}
                 </>
               )}
-            </div>
-            {!(veidTall && kjentAndel != null) && !(veidTall && full === true && metodeIkkeFull !== 'beholder') && !(veidTall && full === false && metodeIkkeFull === 'emballasje') && !(veidTall && metodeIkkeFull === 'beholder' && netto) && (
+            </div>}
+            {!v.stykkvis && !(veidTall && kjentAndel != null) && !(veidTall && full === true && metodeIkkeFull !== 'beholder') && !(veidTall && full === false && metodeIkkeFull === 'emballasje') && !(veidTall && metodeIkkeFull === 'beholder' && netto) && (
               <ProsentVelger verdi={v.andel} onEndre={(x) => sett('andel', x)}
                 etikett={metodeIkkeFull === 'beholder' && veidTall ? 'Hvor fullt er beholderen?' : `Hvor mye er igjen?${fotoAndel != null ? ' (anslått fra bildet)' : ''}`} />
             )}

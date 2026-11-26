@@ -151,6 +151,8 @@ input, select { min-height: 52px; padding: 10px 14px; font-size: 17px; font-weig
 .flis-bunn .dempet { font-size: 13px; font-weight: 600; white-space: nowrap; }
 .bekreft .hode { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
 .bekreft .nå { display: grid; gap: 6px; justify-items: end; color: var(--soft); font-size: 14px; font-weight: 600; min-width: 120px; }
+.bekreft .nå.stk { gap: 0; }
+.bekreft .nå.stk b { font-size: 40px; line-height: 1; color: var(--ink, inherit); font-weight: 800; }
 .alternativer { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 14px; }
 .alternativer button { min-height: 48px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--flate); font-weight: 600; }
 
@@ -362,3 +364,7 @@ summary { min-height: 48px; display: flex; align-items: center; color: var(--sof
   .flis .frist { font-size: 12px; padding: 2px 8px; }
   .søkefelt { width: 100%; }
 }
+.avkryss { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; background: var(--flate-2); cursor: pointer; }
+.avkryss input { width: 22px; height: 22px; margin: 0; accent-color: var(--fjord); flex: none; }
+.avkryss span { display: grid; gap: 2px; font-weight: 600; color: inherit; }
+.avkryss small { font-weight: 400; color: var(--soft); font-size: 13px; }

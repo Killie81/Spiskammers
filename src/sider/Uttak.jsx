@@ -75,7 +75,7 @@ export default function Uttak({ husstand, vis, gåTil }) {
       <section className="uttak rad">
         {bilde && <div className="forhånd liten"><img src={bilde} alt="Bilde av varen" /></div>}
         <div className="kolonne">
-          <UttakBekreft pakning={valgt} foto={foto} husstand={husstand} metode={metode} bildeSti={bildeSti}
+          <UttakBekreft pakning={valgt} lager={lager} foto={foto} husstand={husstand} metode={metode} bildeSti={bildeSti}
             vis={vis} onFerdig={nullstill} onAvbryt={nullstill} />
           {alternativer.length > 0 && (
             <div className="alternativer">
@@ -130,8 +130,8 @@ export default function Uttak({ husstand, vis, gåTil }) {
         {(treffSøk.length ? treffSøk : forslag).map((p) => (
           <button key={p.id} type="button" className="flis" onClick={() => velg(p)}>
             <span className="flis-topp"><StedMerke sted={p.sted} /><Holdbar dato={p.holdbarhet} type={p.dato_type} /></span>
-            <b>{p.navn}{p.antall > 1 && <span className="antall"> · {p.antall} stk</span>}</b>
-            <span className="flis-bunn"><Restbar andel={Number(p.andel)} /><span className="dempet">{prosent(p.andel)}</span></span>
+            <b>{p.navn}{p.antall > 1 && !p.stykkvis && <span className="antall"> · {p.antall} stk</span>}</b>
+            <span className="flis-bunn">{p.stykkvis ? <span className="dempet">{p.antall} stk igjen</span> : <><Restbar andel={Number(p.andel)} /><span className="dempet">{prosent(p.andel)}</span></>}</span>
           </button>
         ))}
         {!lager.length && <p className="tomt">Lageret er tomt. Start med «Legg inn».</p>}

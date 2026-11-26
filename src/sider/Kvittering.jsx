@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { supabase, rpc, spørClaude, lastOppBilde } from '../supabase.js';
 import { krympBilde, tilBase64 } from '../bilde.js';
-import { STEDER, kr, leggTilDager, idag } from '../format.js';
+import { STEDER, kr, leggTilDager, idag, gjettStykkvis } from '../format.js';
 import Fotoknapp from '../deler/Fotoknapp.jsx';
 
 export default function Kvittering({ husstand, vis, gåTil }) {
@@ -53,14 +53,16 @@ export default function Kvittering({ husstand, vis, gåTil }) {
       if (error) throw new Error(error.message);
       let n = 0;
       for (const l of linjer.filter((x) => x.med && (x.type === 'mat' || x.type === 'ikke_mat'))) {
-        await rpc('registrer_inn', {
+        const stykk = l.stykkvis ?? gjettStykkvis(l.vare);
+        const ider = await rpc('registrer_inn', {
           p_navn: l.vare || l.tekst, p_merke: null, p_ean: null, p_kategori: l.kategori || 'annet',
-          p_mengde: l.pakning_mengde ?? null, p_enhet: l.pakning_enhet || 'stk', p_sted: l.lagringssted || 'skap',
+          p_mengde: stykk ? 1 : l.pakning_mengde ?? null, p_enhet: stykk ? 'stk' : l.pakning_enhet || 'stk', p_sted: l.lagringssted || 'skap',
           p_antall: l.antall, p_andel: 1,
           p_holdbarhet: l.holdbarhet_dager ? leggTilDager(dato, l.holdbarhet_dager) : null,
           p_dato_type: l.holdbarhet_dager ? 'anslag' : null,
           p_pris: typeof l.pris === 'number' ? l.pris : null, p_kvittering: kv.id, p_metode: 'kvittering', p_bilde: null,
         });
+        if (stykk && ider?.length) await rpc('sett_stykkvis', { p_pakning: ider[0], p_verdi: true });
         n += l.antall;
       }
       const utgifter = ekstra.map((l) => ({ husstand_id: husstand.id, kvittering_id: kv.id, type: l.type, tekst: l.tekst, antall: l.antall, belop: l.pris || 0, dato }));

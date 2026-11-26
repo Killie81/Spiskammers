@@ -22,6 +22,7 @@ const HL = [
   { id: 'h6', navn: 'Kyllingfilet', antall: 2, avdeling: 'kjott', kilde: 'manuell', begrunnelse: null, avkrysset: false, status: 'aktiv' },
   { id: 'h7', navn: 'Tørkerull', antall: 1, avdeling: 'ikke_mat', kilde: 'manuell', begrunnelse: null, avkrysset: false, status: 'aktiv' },
 ];
+for (let i = 0; i < 5; i++) LAGER.push({ id: `b${i}`, produkt_id: 'pb', sted: 'bod', andel: 1, holdbarhet: d(4 + i % 2), dato_type: 'anslag', apnet: null, navn: 'Bananer', merke: null, pakning_mengde: 1, pakning_enhet: 'stk', stykkvis: true });
 LAGER.forEach((p) => { p.tara_g = p.navn === 'Lettmelk' ? 32 : null; p.netto_g = p.pakning_mengde; });
 const DATA = { produkt: [], beholder: [{ id: 'b1', navn: 'Krydderglass', vekt_g: 85 }, { id: 'b2', navn: 'Glassboks 1 l', vekt_g: 410 }], lager: LAGER, handleliste_vare: HL, unormal_uke: [{ uke: '2026-11-16' }], husstand: [{ id: 'h', navn: 'Hjemme', glass_ml: 300, handledag: 4, handletime: 14 }],
   utgift: [{ type: 'pose', belop: 4.5, antall: 1 }, { type: 'pose', belop: 9, antall: 2 }, { type: 'pant', belop: 6 }], hendelse: [{ id: 'a' }, { id: 'b' }] };
@@ -33,9 +34,10 @@ export const supabase = {
   auth: { getSession: async () => ({ data: { session: { user: { id: 'u' } } } }), onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }), signOut: async () => {} },
   from: kjede,
 };
-export async function rpc(navn) { return navn === 'opprett_husstand' ? 'h' : null; }
+export async function rpc(navn, a) { if (navn === 'ta_ut_stk') return Array.from({ length: a.p_antall }, (_, i) => `h${i}`); if (navn === 'registrer_inn') return ['x']; return navn === 'opprett_husstand' ? 'h' : null; }
 export async function hentLager() { return LAGER; }
 export async function spørClaude(b) {
+  if (b.modus === 'uttak' && globalThis.MOCK_BANAN) return { pakning_id: 'b0', vare: 'Banan', antall_stk: 2, andel_igjen: null, grunnlag_mengde: 'To bananer' };
   if (b.modus === 'uttak') return { pakning_id: '1', vare: 'Lettmelk', andel_igjen: 0.4, vekt_g: 452, grunnlag_mengde: 'Anslått fra bildet' };
   return { vare: 'Nugatti Original', merke: 'Orkla', kategori: 'palegg', ean: '7021010001057', pakning_mengde: 500, pakning_enhet: 'g', andel_igjen: 1, holdbarhet: null, lagringssted: 'skap', vekt_g: 521 };
 }

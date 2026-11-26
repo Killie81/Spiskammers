@@ -46,7 +46,7 @@ export function grupper(lager) {
   const grupper = new Map();
   for (const p of lager) {
     const d = dagerIgjen(p.holdbarhet);
-    const datonøkkel = Number(p.andel) < 1 ? `åpnet-${p.id}` : d == null || d > 14 ? 'lang' : p.holdbarhet;
+    const datonøkkel = p.stykkvis ? 'stk' : Number(p.andel) < 1 ? `åpnet-${p.id}` : d == null || d > 14 ? 'lang' : p.holdbarhet;
     const nøkkel = `${p.produkt_id}|${p.sted}|${datonøkkel}`;
     const g = grupper.get(nøkkel);
     if (g) g.pakninger.push(p);
@@ -117,3 +117,9 @@ export function andelFraVekt(vekt, tara, netto) {
   return Math.min(1, Math.max(0, (vekt - Number(tara)) / Number(netto)));
 }
 export const nettoAv = (mengde, enhet) => (enhet === 'g' || enhet === 'ml') && mengde > 0 ? Number(mengde) : null;
+
+// Frukt o.l. som tas ut én og én, ikke i prosent.
+const STYKKORD = /(banan|appelsin|klementin|mandarin|eple|pære|kiwi|avokado|nektarin|fersken|plomme|sitron|lime|mango|grapefrukt|granateple)/i;
+export function gjettStykkvis(navn) {
+  return STYKKORD.test(navn || '');
+}

@@ -7,9 +7,14 @@ import ProsentVelger from './ProsentVelger.jsx';
 // Bekreft uttak av én pakning. Ett trykk lagrer.
 // foto = { andel_igjen, grunnlag_mengde, vekt_g } fra Claude, eller null ved manuelt uttak.
 // Står varen på vekta og emballasjevekten er kjent, regnes resten nøyaktig ut fra vekten.
-export default function UttakBekreft({ pakning, foto, husstand, metode, bildeSti, vis, onFerdig, onAvbryt }) {
+export default function UttakBekreft({ pakning, lager, foto, husstand, metode, bildeSti, vis, onFerdig, onAvbryt }) {
   const [lagrer, setLagrer] = useState(false);
   const [egen, setEgen] = useState(null); // egen prosent fra glidebryteren
+  // Stykkvarer (bananer o.l.): antall stk av samme vare på samme sted.
+  const stk = pakning.stykkvis
+    ? (lager ? lager.filter((p) => p.produkt_id === pakning.produkt_id && p.sted === pakning.sted).length : pakning.antall || 1)
+    : 0;
+  const [antallUt, setAntallUt] = useState(() => Math.max(1, Math.min(stk || 1, Number(foto?.antall_stk) || 1)));
   const a = Number(pakning.andel);
   const g = glassAndel(pakning.pakning_mengde, pakning.pakning_enhet, husstand.glass_ml);
 
@@ -25,6 +30,47 @@ export default function UttakBekreft({ pakning, foto, husstand, metode, bildeSti
       vis(`Kunne ikke lagre: ${e.message}`);
       setLagrer(false);
     }
+  }
+
+  async function taUtStk(n, type) {
+    setLagrer(true);
+    try {
+      const ider = await rpc('ta_ut_stk', { p_pakning: pakning.id, p_antall: n, p_type: type, p_metode: metode, p_bilde: bildeSti || null });
+      const tekst = `${type === 'svinn' ? 'kastet' : 'tok'} ${ider.length} stk · ${stk - ider.length} igjen`;
+      vis(`${pakning.navn}: ${tekst}`, async () => { for (const h of ider) await rpc('angre_hendelse', { p_hendelse: h }); });
+      onFerdig();
+    } catch (e) {
+      vis(`Kunne ikke lagre: ${e.message}`);
+      setLagrer(false);
+    }
+  }
+
+  if (pakning.stykkvis) {
+    return (
+      <div className="kort bekreft">
+        <div className="hode">
+          <div>
+            <h2>{pakning.navn}</h2>
+            <p className="dempet">{[pakning.merke, stedNavn(pakning.sted)].filter(Boolean).join(' · ')} · <Holdbar dato={pakning.holdbarhet} type={pakning.dato_type} /></p>
+          </div>
+          <div className="nå stk"><b>{stk}</b><span>stk igjen</span></div>
+        </div>
+        <span className="etikett">Hvor mange tar du?</span>
+        <div className="teller">
+          <button type="button" aria-label="Færre" disabled={antallUt <= 1} onClick={() => setAntallUt(antallUt - 1)}>−</button>
+          <b>{antallUt}</b>
+          <button type="button" aria-label="Flere" disabled={antallUt >= stk} onClick={() => setAntallUt(antallUt + 1)}>+</button>
+        </div>
+        <button type="button" className="primær stor" disabled={lagrer} onClick={() => taUtStk(antallUt, 'forbruk')}>
+          Ta ut {antallUt} stk<small>{stk - antallUt} igjen etterpå</small>
+        </button>
+        <div className="valg">
+          {stk > 1 && antallUt !== stk && <button type="button" disabled={lagrer} onClick={() => taUtStk(stk, 'forbruk')}>Alle {stk}</button>}
+          <button type="button" className="kastet" disabled={lagrer} onClick={() => taUtStk(antallUt, 'svinn')}>Kastet {antallUt}</button>
+        </div>
+        {onAvbryt && <button type="button" className="lenke" onClick={onAvbryt}>Avbryt</button>}
+      </div>
+    );
   }
 
   const vekt = foto && foto.vekt_g > 0 ? Number(foto.vekt_g) : null;
