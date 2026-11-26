@@ -92,8 +92,8 @@ export default function Kvittering({ husstand, vis }) {
   if (fase === 'start') {
     return (
       <div className="kolonne">
-        <Fotoknapp tekst="Ta bilde av kvitteringen" onFil={påFil} ikon="▤" />
-        <Fotoknapp tekst="Velg bilde eller PDF" onFil={påFil} kamera={false} aksepter="image/*,application/pdf" klasse="sekundær" ikon="" />
+        <Fotoknapp tekst="Ta bilde av kvitteringen" undertekst="Hele handlelaget registreres på én gang" onFil={påFil} ikon="kvittering" />
+        <Fotoknapp tekst="Velg bilde eller PDF" onFil={påFil} kamera={false} aksepter="image/*,application/pdf" klasse="sekundær" ikon="bilde" />
         <p className="dempet">Legg kvitteringen flatt i godt lys. Lange kvitteringer kan tas i to bilder.</p>
       </div>
     );

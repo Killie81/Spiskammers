@@ -4,6 +4,7 @@ import { krympBilde, lesStrekkode, tilBase64 } from '../bilde.js';
 import { STEDER, holdbarTekst } from '../format.js';
 import Fotoknapp from '../deler/Fotoknapp.jsx';
 import Kvittering from './Kvittering.jsx';
+import Ikon from '../deler/Ikon.jsx';
 
 const TOM = { vare: '', merke: '', ean: '', kategori: 'annet', pakning_mengde: '', pakning_enhet: 'stk', andel: 1, holdbarhet: '', dato_type: 'best_for', lagringssted: 'kjoleskap', antall: 1 };
 const ANDELER = [[1, '1/1 full'], [0.75, '¾'], [0.5, '½'], [0.25, '¼']];
@@ -66,17 +67,17 @@ export default function Inn({ husstand, vis }) {
   return (
     <section className="inn">
       <div className="bryter">
-        <button type="button" className={modus === 'vare' ? 'på' : ''} onClick={() => setModus('vare')}>Vare</button>
-        <button type="button" className={modus === 'kvittering' ? 'på' : ''} onClick={() => setModus('kvittering')}>Kvittering</button>
+        <button type="button" className={modus === 'vare' ? 'på' : ''} onClick={() => setModus('vare')}><Ikon navn="boks" størrelse={18} /> Vare</button>
+        <button type="button" className={modus === 'kvittering' ? 'på' : ''} onClick={() => setModus('kvittering')}><Ikon navn="kvittering" størrelse={18} /> Kvittering</button>
       </div>
 
       {modus === 'kvittering' && <Kvittering husstand={husstand} vis={vis} />}
 
       {modus === 'vare' && fase === 'start' && (
         <div className="kolonne">
-          <Fotoknapp tekst="Ta bilde av varen" onFil={påBilde} />
-          <Fotoknapp tekst="Velg bilde fra albumet" onFil={påBilde} kamera={false} klasse="sekundær" ikon="" />
-          <button type="button" className="sekundær" onClick={() => setFase('skjema')}>Registrer uten bilde</button>
+          <Fotoknapp tekst="Ta bilde av varen" undertekst="Strekkode, dato og mengde leses automatisk" onFil={påBilde} />
+          <div className="to-knapper"><Fotoknapp tekst="Velg fra albumet" onFil={påBilde} kamera={false} klasse="sekundær" ikon="bilde" />
+          <button type="button" className="sekundær" onClick={() => setFase('skjema')}><Ikon navn="inn" størrelse={20} /> Uten bilde</button></div>
         </div>
       )}
 
@@ -115,7 +116,7 @@ export default function Inn({ husstand, vis }) {
             <span className="etikett">Lagringssted</span>
             <div className="valg">
               {STEDER.map(([id, navn]) => (
-                <button key={id} type="button" className={v.lagringssted === id ? 'på' : ''} onClick={() => sett('lagringssted', id)}>{navn}</button>
+                <button key={id} type="button" className={v.lagringssted === id ? 'på' : ''} onClick={() => sett('lagringssted', id)}><Ikon navn={id} størrelse={18} /> {navn}</button>
               ))}
             </div>
             <div className="to">

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase.js';
 import { kr, leggTilDager } from '../format.js';
+import Ikon from '../deler/Ikon.jsx';
 
 export default function Mer({ husstand, setHusstand, vis }) {
   const [glass, setGlass] = useState(husstand.glass_ml);
@@ -30,15 +31,15 @@ export default function Mer({ husstand, setHusstand, vis }) {
   return (
     <section className="mer">
       <div className="tall">
-        <div><b>{tall ? `${kr(tall.poser)} kr` : '…'}</b><span className="dempet">brukt på bæreposer siste år</span></div>
-        <div><b>{tall ? `${kr(tall.pant)} kr` : '…'}</b><span className="dempet">betalt i pant siste år</span></div>
-        <div><b>{tall ? tall.svinn : '…'}</b><span className="dempet">pakninger kastet siste 30 dager</span></div>
+        <div className="tallkort"><Ikon navn="pose" /><b>{tall ? `${kr(tall.poser)} kr` : '…'}</b><span className="dempet">brukt på bæreposer siste år</span></div>
+        <div className="tallkort"><Ikon navn="angre" /><b>{tall ? `${kr(tall.pant)} kr` : '…'}</b><span className="dempet">betalt i pant siste år</span></div>
+        <div className="tallkort"><Ikon navn="søppel" /><b>{tall ? tall.svinn : '…'}</b><span className="dempet">pakninger kastet siste 30 dager</span></div>
       </div>
       <div className="kort skjema">
         <h2>Innstillinger</h2>
         <label>Ett glass (ml)
-          <div className="to"><input inputMode="numeric" value={glass} onChange={(e) => setGlass(e.target.value)} />
-            <button type="button" onClick={lagreGlass}>Lagre</button></div>
+          <div className="glassrad"><input inputMode="numeric" value={glass} onChange={(e) => setGlass(e.target.value)} />
+            <button type="button" className="primær" onClick={lagreGlass}>Lagre</button></div>
         </label>
         <button type="button" className="lenke" onClick={() => supabase.auth.signOut()}>Logg ut</button>
       </div>

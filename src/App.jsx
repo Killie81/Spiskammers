@@ -5,12 +5,13 @@ import Uttak from './sider/Uttak.jsx';
 import Inn from './sider/Inn.jsx';
 import Lager from './sider/Lager.jsx';
 import Mer from './sider/Mer.jsx';
+import Ikon from './deler/Ikon.jsx';
 
 const FANER = [
-  ['uttak', 'Ta ut'],
-  ['inn', 'Legg inn'],
-  ['lager', 'Lager'],
-  ['mer', 'Mer'],
+  ['uttak', 'Ta ut', 'ut'],
+  ['inn', 'Legg inn', 'inn'],
+  ['lager', 'Lager', 'lager'],
+  ['mer', 'Mer', 'mer'],
 ];
 
 export default function App() {
@@ -54,12 +55,16 @@ export default function App() {
 
   return (
     <div className="app">
-      <nav className="faner">
-        <span className="merke">Spiskammers</span>
-        {FANER.map(([id, navn]) => (
-          <button key={id} type="button" className={fane === id ? 'på' : ''} onClick={() => setFane(id)}>{navn}</button>
-        ))}
-      </nav>
+      <header className="topp">
+        <span className="merke"><span className="merke-ikon"><Ikon navn="boks" størrelse={18} /></span>Spiskammers</span>
+        <nav className="faner" aria-label="Hovedmeny">
+          {FANER.map(([id, navn, ikon]) => (
+            <button key={id} type="button" className={fane === id ? 'på' : ''} aria-current={fane === id ? 'page' : undefined} onClick={() => setFane(id)}>
+              <Ikon navn={ikon} størrelse={20} /><span>{navn}</span>
+            </button>
+          ))}
+        </nav>
+      </header>
       <main className="innhold">
         {fane === 'uttak' && <Uttak {...felles} />}
         {fane === 'inn' && <Inn {...felles} />}

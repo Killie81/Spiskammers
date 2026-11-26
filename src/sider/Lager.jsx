@@ -3,6 +3,7 @@ import { hentLager, rpc } from '../supabase.js';
 import { STEDER, stedNavn, prosent, dagerIgjen } from '../format.js';
 import { Restbar, Holdbar } from '../deler/Rest.jsx';
 import UttakBekreft from '../deler/UttakBekreft.jsx';
+import Ikon, { StedMerke } from '../deler/Ikon.jsx';
 
 export default function Lager({ husstand, vis }) {
   const [lager, setLager] = useState(null);
@@ -34,19 +35,20 @@ export default function Lager({ husstand, vis }) {
   return (
     <section className="lager">
       {snart.length > 0 && (
-        <div className="kort advarsel">
-          <b>{snart.length} {snart.length === 1 ? 'vare går' : 'varer går'} ut innen to dager:</b> {snart.map((p) => p.navn).join(', ')}
+        <div className="banner">
+          <Ikon navn="klokke" størrelse={22} />
+          <span><b>{snart.length} {snart.length === 1 ? 'vare går' : 'varer går'} ut innen to dager:</b> {snart.map((p) => p.navn).join(', ')}</span>
         </div>
       )}
       <div className="bryter">
-        <button type="button" className={sted === 'alle' ? 'på' : ''} onClick={() => setSted('alle')}>Alle ({lager.length})</button>
+        <button type="button" className={sted === 'alle' ? 'på' : ''} onClick={() => setSted('alle')}>Alle <small>{lager.length}</small></button>
         {STEDER.map(([id, navn]) => (
           <button key={id} type="button" className={sted === id ? 'på' : ''} onClick={() => setSted(id)}>
-            {navn} ({lager.filter((p) => p.sted === id).length})
+            <Ikon navn={id} størrelse={18} /> {navn} <small>{lager.filter((p) => p.sted === id).length}</small>
           </button>
         ))}
       </div>
-      <input className="søk" type="search" placeholder="Søk …" value={søk} onChange={(e) => setSøk(e.target.value)} />
+      <label className="søkefelt bred"><Ikon navn="søk" størrelse={18} /><input type="search" placeholder="Søk i lageret" value={søk} onChange={(e) => setSøk(e.target.value)} /></label>
 
       {åpen && (
         <div className="ark" role="dialog" aria-label={åpen.navn}>
@@ -79,8 +81,9 @@ export default function Lager({ husstand, vis }) {
         {vist.map((p) => (
           <li key={p.id}>
             <button type="button" onClick={() => { setÅpen(p); setHandling(null); }}>
-              <span className="navn"><b>{p.navn}</b>{sted === 'alle' && <small className="dempet"> · {stedNavn(p.sted)}</small>}</span>
-              <Restbar andel={Number(p.andel)} />
+              <StedMerke sted={p.sted} />
+              <span className="navn"><b>{p.navn}</b><small className="dempet">{[p.merke, stedNavn(p.sted)].filter(Boolean).join(' · ')}</small></span>
+              <span className="rest"><Restbar andel={Number(p.andel)} /><small className="dempet">{prosent(p.andel)}</small></span>
               <Holdbar dato={p.holdbarhet} type={p.dato_type} />
             </button>
           </li>
