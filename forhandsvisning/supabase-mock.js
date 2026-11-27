@@ -13,7 +13,18 @@ const LAGER = [
   { id: '7', produkt_id: 'p7', sted: 'skuffe', andel: 0.8, holdbarhet: d(6), dato_type: 'anslag', apnet: null, navn: 'Gulrøtter', merke: null, pakning_mengde: 750, pakning_enhet: 'g' },
   { id: '8', produkt_id: 'p8', sted: 'kjoleskap', andel: 0.9, holdbarhet: null, dato_type: null, apnet: d(-1), navn: 'Lapskaus, 4 porsjoner', merke: null, pakning_mengde: null, pakning_enhet: 'stk' },
 ];
-const DATA = { lager: LAGER, husstand: [{ id: 'h', navn: 'Hjemme', glass_ml: 300 }],
+const HL = [
+  { id: 'h1', navn: 'Lettmelk', antall: 4, avdeling: 'meieri', kilde: 'forslag', begrunnelse: 'Bruker ca. 3,0 pk/uke, nok til 1 d', avkrysset: false, status: 'aktiv' },
+  { id: 'h2', navn: 'Agurk', antall: 1, avdeling: 'frukt_gront', kilde: 'forslag', begrunnelse: 'Bruker ca. 1,0 pk/uke, nok til 7 d · ofte kastet, foreslår mindre', avkrysset: false, status: 'aktiv' },
+  { id: 'h3', navn: 'Bananer', antall: 6, avdeling: 'frukt_gront', kilde: 'manuell', begrunnelse: null, avkrysset: true, status: 'aktiv' },
+  { id: 'h4', navn: 'Kaffe', antall: 1, avdeling: 'torrvarer', kilde: 'fast', begrunnelse: 'Fast vare', avkrysset: false, status: 'aktiv' },
+  { id: 'h5', navn: 'Smør', antall: 1, avdeling: 'meieri', kilde: 'forslag', begrunnelse: 'Snart tom', avkrysset: false, status: 'aktiv' },
+  { id: 'h6', navn: 'Kyllingfilet', antall: 2, avdeling: 'kjott', kilde: 'manuell', begrunnelse: null, avkrysset: false, status: 'aktiv' },
+  { id: 'h7', navn: 'Tørkerull', antall: 1, avdeling: 'ikke_mat', kilde: 'manuell', begrunnelse: null, avkrysset: false, status: 'aktiv' },
+];
+for (let i = 0; i < 5; i++) LAGER.push({ id: `b${i}`, produkt_id: 'pb', sted: 'bod', andel: 1, holdbarhet: d(4 + i % 2), dato_type: 'anslag', apnet: null, navn: 'Bananer', merke: null, pakning_mengde: 1, pakning_enhet: 'stk', stykkvis: true });
+LAGER.forEach((p) => { p.tara_g = p.navn === 'Lettmelk' ? 32 : null; p.netto_g = p.pakning_mengde; });
+const DATA = { produkt: [], beholder: [{ id: 'b1', navn: 'Krydderglass', vekt_g: 85 }, { id: 'b2', navn: 'Glassboks 1 l', vekt_g: 410 }], lager: LAGER, handleliste_vare: HL, unormal_uke: [{ uke: '2026-11-16' }], husstand: [{ id: 'h', navn: 'Hjemme', glass_ml: 300, handledag: 4, handletime: 14 }],
   utgift: [{ type: 'pose', belop: 4.5, antall: 1 }, { type: 'pose', belop: 9, antall: 2 }, { type: 'pant', belop: 6 }], hendelse: [{ id: 'a' }, { id: 'b' }] };
 const kjede = (tabell) => { const svar = { data: DATA[tabell] || [], error: null };
   const k = new Proxy({}, { get: (_, p) => p === 'then' ? (r) => r(svar) : p === 'single' ? () => Promise.resolve({ data: (DATA[tabell] || [])[0], error: null }) : () => k });
@@ -23,7 +34,11 @@ export const supabase = {
   auth: { getSession: async () => ({ data: { session: { user: { id: 'u' } } } }), onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }), signOut: async () => {} },
   from: kjede,
 };
-export async function rpc(navn) { return navn === 'opprett_husstand' ? 'h' : null; }
+export async function rpc(navn, a) { if (navn === 'ta_ut_stk') return Array.from({ length: a.p_antall }, (_, i) => `h${i}`); if (navn === 'registrer_inn') return ['x']; return navn === 'opprett_husstand' ? 'h' : null; }
 export async function hentLager() { return LAGER; }
-export async function spørClaude() { return {}; }
+export async function spørClaude(b) {
+  if (b.modus === 'uttak' && globalThis.MOCK_BANAN) return { pakning_id: 'b0', vare: 'Banan', antall_stk: 2, andel_igjen: null, grunnlag_mengde: 'To bananer' };
+  if (b.modus === 'uttak') return { pakning_id: '1', vare: 'Lettmelk', andel_igjen: 0.4, vekt_g: 452, grunnlag_mengde: 'Anslått fra bildet' };
+  return { vare: 'Nugatti Original', merke: 'Orkla', kategori: 'palegg', ean: '7021010001057', pakning_mengde: 500, pakning_enhet: 'g', andel_igjen: 1, holdbarhet: null, lagringssted: 'skap', vekt_g: 521 };
+}
 export async function lastOppBilde() { return null; }

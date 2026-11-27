@@ -1,12 +1,20 @@
 import { useState } from 'react';
 import { rpc } from '../supabase.js';
-import { glassAndel, prosent, stedNavn } from '../format.js';
+import { glassAndel, prosent, stedNavn, andelFraVekt } from '../format.js';
 import { Restbar, Holdbar } from './Rest.jsx';
+import ProsentVelger from './ProsentVelger.jsx';
 
 // Bekreft uttak av én pakning. Ett trykk lagrer.
-// foto = { andel_igjen, grunnlag_mengde } fra Claude, eller null ved manuelt uttak.
-export default function UttakBekreft({ pakning, foto, husstand, metode, bildeSti, vis, onFerdig, onAvbryt }) {
+// foto = { andel_igjen, grunnlag_mengde, vekt_g } fra Claude, eller null ved manuelt uttak.
+// Står varen på vekta og emballasjevekten er kjent, regnes resten nøyaktig ut fra vekten.
+export default function UttakBekreft({ pakning, lager, foto, husstand, metode, bildeSti, vis, onFerdig, onAvbryt }) {
   const [lagrer, setLagrer] = useState(false);
+  const [egen, setEgen] = useState(null); // egen prosent fra glidebryteren
+  // Stykkvarer (bananer o.l.): antall stk av samme vare på samme sted.
+  const stk = pakning.stykkvis
+    ? (lager ? lager.filter((p) => p.produkt_id === pakning.produkt_id && p.sted === pakning.sted).length : pakning.antall || 1)
+    : 0;
+  const [antallUt, setAntallUt] = useState(() => Math.max(1, Math.min(stk || 1, Number(foto?.antall_stk) || 1)));
   const a = Number(pakning.andel);
   const g = glassAndel(pakning.pakning_mengde, pakning.pakning_enhet, husstand.glass_ml);
 
@@ -24,9 +32,57 @@ export default function UttakBekreft({ pakning, foto, husstand, metode, bildeSti
     }
   }
 
-  const fotoAndel = foto && typeof foto.andel_igjen === 'number' ? Math.min(a, Math.max(0, foto.andel_igjen)) : null;
-  const tok = (x, navn) => ({ ny: Math.max(0, a - x), navn });
-  const valg = [tok(0.25, 'tok ¼'), tok(0.5, 'tok ½'), tok(0.75, 'tok ¾')];
+  async function taUtStk(n, type) {
+    setLagrer(true);
+    try {
+      const ider = await rpc('ta_ut_stk', { p_pakning: pakning.id, p_antall: n, p_type: type, p_metode: metode, p_bilde: bildeSti || null });
+      const tekst = `${type === 'svinn' ? 'kastet' : 'tok'} ${ider.length} stk · ${stk - ider.length} igjen`;
+      vis(`${pakning.navn}: ${tekst}`, async () => { for (const h of ider) await rpc('angre_hendelse', { p_hendelse: h }); });
+      onFerdig();
+    } catch (e) {
+      vis(`Kunne ikke lagre: ${e.message}`);
+      setLagrer(false);
+    }
+  }
+
+  if (pakning.stykkvis) {
+    return (
+      <div className="kort bekreft">
+        <div className="hode">
+          <div>
+            <h2>{pakning.navn}</h2>
+            <p className="dempet">{[pakning.merke, stedNavn(pakning.sted)].filter(Boolean).join(' · ')} · <Holdbar dato={pakning.holdbarhet} type={pakning.dato_type} /></p>
+          </div>
+          <div className="nå stk"><b>{stk}</b><span>stk igjen</span></div>
+        </div>
+        <span className="etikett">Hvor mange tar du?</span>
+        <div className="teller">
+          <button type="button" aria-label="Færre" disabled={antallUt <= 1} onClick={() => setAntallUt(antallUt - 1)}>−</button>
+          <b>{antallUt}</b>
+          <button type="button" aria-label="Flere" disabled={antallUt >= stk} onClick={() => setAntallUt(antallUt + 1)}>+</button>
+        </div>
+        <button type="button" className="primær stor" disabled={lagrer} onClick={() => taUtStk(antallUt, 'forbruk')}>
+          Ta ut {antallUt} stk<small>{stk - antallUt} igjen etterpå</small>
+        </button>
+        <div className="valg">
+          {stk > 1 && antallUt !== stk && <button type="button" disabled={lagrer} onClick={() => taUtStk(stk, 'forbruk')}>Alle {stk}</button>}
+          <button type="button" className="kastet" disabled={lagrer} onClick={() => taUtStk(antallUt, 'svinn')}>Kastet {antallUt}</button>
+        </div>
+        {onAvbryt && <button type="button" className="lenke" onClick={onAvbryt}>Avbryt</button>}
+      </div>
+    );
+  }
+
+  const vekt = foto && foto.vekt_g > 0 ? Number(foto.vekt_g) : null;
+  const vektAndel = vekt ? andelFraVekt(vekt, pakning.tara_g, pakning.netto_g) : null;
+  const bildeAndel = foto && typeof foto.andel_igjen === 'number' ? Math.max(0, foto.andel_igjen) : null;
+  const forslag = vektAndel ?? bildeAndel;
+  const forslagIgjen = forslag != null ? Math.min(a, forslag) : null;
+  const grunnlag = vektAndel != null
+    ? `Veid ${Math.round(vekt)} g − emballasje ${Math.round(pakning.tara_g)} g av ${Math.round(pakning.netto_g)} g`
+    : vekt ? `Veid ${Math.round(vekt)} g, men emballasjevekten er ikke kjent ennå – anslått fra bildet` : foto?.grunnlag_mengde;
+  const tok = (x) => ({ ny: Math.max(0, a - x), navn: `tok ${Math.round(x * 100)} %` });
+  const valg = [tok(0.25), tok(0.5), tok(0.75)];
 
   return (
     <div className="kort bekreft">
@@ -38,24 +94,35 @@ export default function UttakBekreft({ pakning, foto, husstand, metode, bildeSti
         <div className="nå"><Restbar andel={a} /><span>{prosent(a)} igjen nå</span></div>
       </div>
 
-      {fotoAndel != null && (
-        <button type="button" className="primær stor" disabled={lagrer}
-          onClick={() => lagre(fotoAndel, 'forbruk', fotoAndel === 0 ? 'tom' : `${prosent(fotoAndel)} igjen`)}>
-          Lagre: {fotoAndel === 0 ? 'tom' : `${prosent(fotoAndel)} igjen`}
-          {foto.grunnlag_mengde && <small>{foto.grunnlag_mengde}</small>}
+      {forslagIgjen != null && (
+        <button type="button" className={`primær stor${vektAndel != null ? ' veid' : ''}`} disabled={lagrer}
+          onClick={() => lagre(forslagIgjen, 'forbruk', forslagIgjen === 0 ? 'tom' : `${prosent(forslagIgjen)} igjen`)}>
+          Lagre: {forslagIgjen === 0 ? 'tom' : `${prosent(forslagIgjen)} igjen`}
+          {grunnlag && <small>{grunnlag}</small>}
         </button>
       )}
 
-      <p className="dempet">{fotoAndel != null ? 'Eller velg selv:' : 'Hvor mye ble tatt ut?'}</p>
+      <p className="dempet">{forslagIgjen != null ? 'Eller velg selv:' : 'Hvor mye ble tatt ut?'}</p>
       <div className="valg">
         {valg.map((v) => (
-          <button key={v.navn} type="button" disabled={lagrer || v.ny >= a} onClick={() => lagre(v.ny, 'forbruk', v.navn)}>{v.navn.replace('tok ', '')}</button>
+          <button key={v.navn} type="button" disabled={lagrer || v.ny >= a} onClick={() => lagre(v.ny, 'forbruk', v.navn)}>{v.navn.replace('tok ', '−')}</button>
         ))}
         <button type="button" disabled={lagrer || !g} title={g ? '' : 'Bare for varer målt i ml'}
           onClick={() => lagre(Math.max(0, a - g), 'forbruk', `1 glass (${husstand.glass_ml} ml)`)}>1 glass</button>
         <button type="button" disabled={lagrer} onClick={() => lagre(0, 'forbruk', 'tom')}>Tom</button>
         <button type="button" className="kastet" disabled={lagrer} onClick={() => lagre(0, 'svinn', 'kastet')}>Kastet</button>
       </div>
+
+      <details className="egen-prosent" onToggle={(e) => e.currentTarget.open && egen == null && setEgen(forslagIgjen ?? a)}>
+        <summary>Angi nøyaktig hvor mye som er igjen</summary>
+        {egen != null && (
+          <>
+            <ProsentVelger verdi={egen} onEndre={(v) => setEgen(Math.min(a, v))} valg={[75, 50, 25, 10]} etikett="Igjen etter uttak" />
+            <button type="button" className="primær" disabled={lagrer || egen >= a}
+              onClick={() => lagre(egen, 'forbruk', egen === 0 ? 'tom' : `${prosent(egen)} igjen`)}>Lagre {prosent(egen)} igjen</button>
+          </>
+        )}
+      </details>
       {onAvbryt && <button type="button" className="lenke" onClick={onAvbryt}>Avbryt</button>}
     </div>
   );

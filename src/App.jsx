@@ -4,12 +4,14 @@ import Login from './sider/Login.jsx';
 import Uttak from './sider/Uttak.jsx';
 import Inn from './sider/Inn.jsx';
 import Lager from './sider/Lager.jsx';
+import Handleliste from './sider/Handleliste.jsx';
 import Mer from './sider/Mer.jsx';
 import Ikon from './deler/Ikon.jsx';
 
 const FANER = [
   ['uttak', 'Ta ut', 'ut'],
   ['inn', 'Legg inn', 'inn'],
+  ['handle', 'Handle', 'kurv'],
   ['lager', 'Lager', 'lager'],
   ['mer', 'Mer', 'mer'],
 ];
@@ -19,7 +21,13 @@ export default function App() {
   const [husstand, setHusstand] = useState(null);
   const [fane, setFane] = useState('uttak');
   const [lagerSted, setLagerSted] = useState('alle');
-  const gåTil = useCallback((f, sted) => { if (sted) setLagerSted(sted); setFane(f); window.scrollTo(0, 0); }, []);
+  const [innModus, setInnModus] = useState('vare');
+  // gåTil('lager', 'fryser') åpner Lager filtrert; gåTil('inn', 'kvittering') åpner kvitteringsfanen.
+  const gåTil = useCallback((f, valg) => {
+    if (f === 'lager') setLagerSted(valg || 'alle');
+    if (f === 'inn') setInnModus(valg || 'vare');
+    setFane(f); window.scrollTo(0, 0);
+  }, []);
   const [melding, setMelding] = useState(null);
   const timer = useRef(null);
 
@@ -61,7 +69,7 @@ export default function App() {
         <span className="merke"><span className="merke-ikon"><Ikon navn="boks" størrelse={18} /></span>Spiskammers</span>
         <nav className="faner" aria-label="Hovedmeny">
           {FANER.map(([id, navn, ikon]) => (
-            <button key={id} type="button" className={fane === id ? 'på' : ''} aria-current={fane === id ? 'page' : undefined} onClick={() => gåTil(id, id === 'lager' ? 'alle' : undefined)}>
+            <button key={id} type="button" className={fane === id ? 'på' : ''} aria-current={fane === id ? 'page' : undefined} onClick={() => gåTil(id)}>
               <Ikon navn={ikon} størrelse={20} /><span>{navn}</span>
             </button>
           ))}
@@ -69,7 +77,8 @@ export default function App() {
       </header>
       <main className="innhold">
         {fane === 'uttak' && <Uttak {...felles} />}
-        {fane === 'inn' && <Inn {...felles} />}
+        {fane === 'inn' && <Inn key={innModus} startModus={innModus} {...felles} />}
+        {fane === 'handle' && <Handleliste {...felles} />}
         {fane === 'lager' && <Lager key={lagerSted} startSted={lagerSted} {...felles} />}
         {fane === 'mer' && <Mer {...felles} />}
       </main>
