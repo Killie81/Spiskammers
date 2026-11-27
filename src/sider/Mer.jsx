@@ -11,13 +11,17 @@ export default function Mer({ husstand, setHusstand, vis }) {
     (async () => {
       const fra = leggTilDager(null, -365);
       const fra30 = new Date(Date.now() - 30 * 864e5).toISOString();
-      const [{ data: utg }, { data: svinn }] = await Promise.all([
+      const [{ data: utg }, { data: svinn }, { data: impuls }] = await Promise.all([
         supabase.from('utgift').select('type, belop').gte('dato', fra),
         supabase.from('hendelse').select('id').eq('type', 'svinn').gte('tid', fra30),
+        supabase.from('kurv_vare').select('pris').eq('impuls', true).eq('status', 'lagret').gte('opprettet', fra30),
       ]);
       const s = (t) => (utg || []).filter((u) => u.type === t).reduce((a, u) => a + Number(u.belop), 0);
-      setTall({ poser: s('pose'), pant: s('pant'), svinn: (svinn || []).length });
-    })().catch(() => setTall({ poser: 0, pant: 0, svinn: 0 }));
+      setTall({
+        poser: s('pose'), pant: s('pant'), svinn: (svinn || []).length,
+        impuls: (impuls || []).length, impulsKr: (impuls || []).reduce((a, r) => a + Number(r.pris || 0), 0),
+      });
+    })().catch(() => setTall({ poser: 0, pant: 0, svinn: 0, impuls: 0, impulsKr: 0 }));
   }, []);
 
   // Familien: hvem kan åpne søtsaker, og hvem har åpnet hva siste 30 dager.
@@ -91,6 +95,7 @@ export default function Mer({ husstand, setHusstand, vis }) {
         <div className="tallkort"><Ikon navn="pose" /><b>{tall ? `${kr(tall.poser)} kr` : '…'}</b><span className="dempet">brukt på bæreposer siste år</span></div>
         <div className="tallkort"><Ikon navn="angre" /><b>{tall ? `${kr(tall.pant)} kr` : '…'}</b><span className="dempet">betalt i pant siste år</span></div>
         <div className="tallkort"><Ikon navn="søppel" /><b>{tall ? tall.svinn : '…'}</b><span className="dempet">pakninger kastet siste 30 dager</span></div>
+        <div className="tallkort"><Ikon navn="kamera" /><b>{tall ? `${kr(tall.impulsKr)} kr` : '…'}</b><span className="dempet">{tall ? `${tall.impuls} impulskjøp` : 'impulskjøp'} siste 30 dager</span></div>
       </div>
       <div className="kort skjema">
         <h2>Innstillinger</h2>

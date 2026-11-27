@@ -396,3 +396,11 @@ summary { min-height: 48px; display: flex; align-items: center; color: var(--sof
 .kurvpåminner .valg { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 8px; grid-column: 1 / -1; }
 .kurvpåminner .valg button { margin: 0; justify-self: auto; align-self: auto; }
 .banner.rolig.kurvpåminner .valg .primær { margin-left: 0; }
+.impulsknapp { position: relative; display: flex; align-items: center; gap: 14px; margin: 0 0 12px; padding: 12px 16px; border-radius: 16px; border: 1px solid var(--line); background: var(--flate); cursor: pointer; }
+.impulsknapp input, .impuls-flytende input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.impulsknapp > span:last-child { display: grid; }
+.impulsknapp small { color: var(--soft); font-size: 13px; }
+.impuls-ikon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 14px; background: var(--rav-svak); color: var(--rav); flex: none; }
+.impuls-flytende { position: fixed; right: 18px; bottom: calc(22px + env(safe-area-inset-bottom)); z-index: 5; display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-radius: 999px; background: var(--rav); color: var(--fjord-ink); font-weight: 700; font-size: 17px; box-shadow: 0 8px 24px rgba(0,0,0,.18); cursor: pointer; }
+.impuls-flytende.laster { opacity: .8; }
+.handletur .tur-innhold { padding-bottom: 110px; }

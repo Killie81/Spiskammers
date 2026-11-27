@@ -31,6 +31,7 @@ export async function fotograferTilKurv(fil, husstand, vare) {
     antall: Math.max(1, stykk ? parseInt(r.antall_stk, 10) || vare?.antall || 1 : vare?.antall || 1),
     stykkvis: stykk,
     bilde_sti: sti,
+    impuls: !vare,
   };
   // Et nytt bilde av samme vare på listen erstatter det forrige.
   if (vare) await supabase.from('kurv_vare').delete().eq('handleliste_id', vare.id).eq('status', 'i_kurv');
@@ -55,6 +56,7 @@ export async function leggKurvILager(k, { antall, pris, sted, kvittering, holdba
     p_pris: typeof pris === 'number' ? pris : null, p_kvittering: kvittering || null, p_metode: 'foto', p_bilde: k.bilde_sti,
   });
   if (k.stykkvis && ider?.length) await rpc('sett_stykkvis', { p_pakning: ider[0], p_verdi: true });
+  if (typeof pris === 'number') await supabase.from('kurv_vare').update({ pris }).eq('id', k.id);
   await rpc('avslutt_kurv', { p_kurv: k.id, p_status: 'lagret', p_kvittering: kvittering || null });
   return antall || k.antall;
 }
