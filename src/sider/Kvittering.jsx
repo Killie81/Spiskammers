@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase, rpc, spørClaude, lastOppBilde } from '../supabase.js';
 import { krympBilde, tilBase64 } from '../bilde.js';
 import { STEDER, kr, leggTilDager, idag, gjettStykkvis } from '../format.js';
 import Fotoknapp from '../deler/Fotoknapp.jsx';
+import Ikon from '../deler/Ikon.jsx';
+import { hentKurv, leggKurvILager, kurvTekst } from '../kurv.js';
 
 export default function Kvittering({ husstand, vis, gåTil }) {
   const [fase, setFase] = useState('start'); // start | leser | liste
@@ -10,8 +12,12 @@ export default function Kvittering({ husstand, vis, gåTil }) {
   const [linjer, setLinjer] = useState([]);
   const [blob, setBlob] = useState(null);
   const [lagrer, setLagrer] = useState(false);
+  // Varer fotografert i handlevogna. De pares med kvitteringslinjene.
+  const [kurv, setKurv] = useState([]);
+  const [valgKurv, setValgKurv] = useState({}); // kurv-id → 'kjopt' | 'ikke' for varer som ikke ble funnet
+  useEffect(() => { hentKurv().then(setKurv).catch(() => {}); }, []);
 
-  const nullstill = () => { setFase('start'); setK(null); setLinjer([]); setBlob(null); };
+  const nullstill = () => { setFase('start'); setK(null); setLinjer([]); setBlob(null); setValgKurv({}); hentKurv().then(setKurv).catch(() => {}); };
   const endre = (i, felt, verdi) => setLinjer((ls) => ls.map((l, j) => (j === i ? { ...l, [felt]: verdi } : l)));
 
   async function påFil(fil) {
@@ -25,9 +31,22 @@ export default function Kvittering({ husstand, vis, gåTil }) {
         bilde = await tilBase64(b);
       }
       setBlob(b);
-      const r = await spørClaude({ modus: 'kvittering', bilde, mediaType });
+      const r = await spørClaude({
+        modus: 'kvittering', bilde, mediaType,
+        kurv: kurv.map((x) => ({ id: x.id, navn: x.navn, merke: x.merke, mengde: x.pakning_mengde, enhet: x.pakning_enhet, antall: x.antall })),
+      });
       setK(r);
-      setLinjer((r.linjer || []).map((l) => ({ ...l, antall: Math.max(1, parseInt(l.antall, 10) || 1), med: l.type === 'mat' })));
+      const brukt = new Set();
+      setLinjer((r.linjer || []).map((l) => {
+        const kv = l.kurv_id && !brukt.has(l.kurv_id) ? kurv.find((x) => x.id === l.kurv_id) : null;
+        if (kv) brukt.add(kv.id);
+        return {
+          ...l, antall: Math.max(1, parseInt(l.antall, 10) || 1), kurv: kv || null,
+          type: kv && l.type !== 'pose' && l.type !== 'pant' ? 'mat' : l.type,
+          lagringssted: kv?.lagringssted || l.lagringssted,
+          med: l.type === 'mat' || Boolean(kv),
+        };
+      }));
       setFase('liste');
     } catch (e) {
       vis(`Kvitteringen kunne ikke leses: ${e.message}`);
@@ -42,6 +61,9 @@ export default function Kvittering({ husstand, vis, gåTil }) {
   const ikkeMat = linjer.map((l, i) => [l, i]).filter(([l]) => l.type === 'ikke_mat');
   const sum = (t) => ekstra.filter((l) => l.type === t).reduce((a, l) => a + (l.pris || 0), 0);
 
+  const brukteKurv = new Set(linjer.filter((l) => l.kurv).map((l) => l.kurv.id));
+  const ikkeFunnet = kurv.filter((x) => !brukteKurv.has(x.id));
+
   async function lagre() {
     setLagrer(true);
     try {
@@ -53,6 +75,14 @@ export default function Kvittering({ husstand, vis, gåTil }) {
       if (error) throw new Error(error.message);
       let n = 0;
       for (const l of linjer.filter((x) => x.med && (x.type === 'mat' || x.type === 'ikke_mat'))) {
+        // Fotografert i handlevogna: bildet gir vare, størrelse og dato, kvitteringen gir antall og pris.
+        if (l.kurv) {
+          n += await leggKurvILager(l.kurv, {
+            antall: l.antall, pris: typeof l.pris === 'number' ? l.pris : null, sted: l.lagringssted, kvittering: kv.id,
+            holdbarhet: l.holdbarhet_dager ? leggTilDager(dato, l.holdbarhet_dager) : null,
+          });
+          continue;
+        }
         const stykk = l.stykkvis ?? gjettStykkvis(l.vare);
         const ider = await rpc('registrer_inn', {
           p_navn: l.vare || l.tekst, p_merke: null, p_ean: null, p_kategori: String(l.kategori || 'annet').split(/[\s(]/)[0],
@@ -69,6 +99,11 @@ export default function Kvittering({ husstand, vis, gåTil }) {
       if (utgifter.length) {
         const { error: e2 } = await supabase.from('utgift').insert(utgifter);
         if (e2) throw new Error(e2.message);
+      }
+      // Fotografert, men ikke funnet på kvitteringen: det dere valgte.
+      for (const x of ikkeFunnet) {
+        if (valgKurv[x.id] === 'kjopt') n += await leggKurvILager(x);
+        else if (valgKurv[x.id] === 'ikke') await rpc('avslutt_kurv', { p_kurv: x.id, p_status: 'ikke_kjopt' });
       }
       // Avstem handlelisten mot det som faktisk ble kjøpt.
       let avstemt = null;
@@ -93,6 +128,7 @@ export default function Kvittering({ husstand, vis, gåTil }) {
         {STEDER.map(([id, navn]) => <option key={id} value={id}>{navn}</option>)}
       </select>
       <span className="pris">{kr(l.pris)}</span>
+      {l.kurv && <span className="rå kurvinfo"><Ikon navn="kamera" størrelse={13} /> Fra handlevogna: {kurvTekst(l.kurv)}</span>}
       <span className="rå">«{l.tekst}»{l.holdbarhet_dager ? ` · holder ca. ${l.holdbarhet_dager} d` : ''}{l.sikker === false && <em>Sjekk</em>}</span>
     </div>
   );
@@ -100,7 +136,7 @@ export default function Kvittering({ husstand, vis, gåTil }) {
   if (fase === 'start') {
     return (
       <div className="kolonne">
-        <Fotoknapp tekst="Ta bilde av kvitteringen" undertekst="Hele handlelaget registreres på én gang" onFil={påFil} ikon="kvittering" />
+        <Fotoknapp tekst="Ta bilde av kvitteringen" undertekst={kurv.length ? `${kurv.length} varer fra handlevogna pares med kvitteringen` : 'Hele handlelaget registreres på én gang'} onFil={påFil} ikon="kvittering" />
         <Fotoknapp tekst="Velg bilde eller PDF" onFil={påFil} kamera={false} aksepter="image/*,application/pdf" klasse="sekundær" ikon="bilde" />
         <p className="dempet">Legg kvitteringen flatt i godt lys. Lange kvitteringer kan tas i to bilder.</p>
       </div>
@@ -123,6 +159,21 @@ export default function Kvittering({ husstand, vis, gåTil }) {
       )}
       {ikkeMat.length > 0 && (
         <details><summary>Ikke mat: {ikkeMat.length} linjer (kan tas med)</summary><div className="linjer">{ikkeMat.map(rad)}</div></details>
+      )}
+      {ikkeFunnet.length > 0 && (
+        <div className="ekstra kurv-ikke-funnet">
+          <h3>Fotografert i handlevogna, men ikke funnet på kvitteringen</h3>
+          {ikkeFunnet.map((x) => (
+            <div key={x.id} className="ekstralinje">
+              <span><b>{x.navn}</b>{x.antall > 1 ? ` × ${x.antall}` : ''}<small className="dempet"> {kurvTekst(x)}</small></span>
+              <span className="valg">
+                <button type="button" className={valgKurv[x.id] === 'kjopt' ? 'på' : ''} onClick={() => setValgKurv({ ...valgKurv, [x.id]: 'kjopt' })}>Kjøpt likevel</button>
+                <button type="button" className={valgKurv[x.id] === 'ikke' ? 'på' : ''} onClick={() => setValgKurv({ ...valgKurv, [x.id]: 'ikke' })}>Ikke kjøpt</button>
+              </span>
+            </div>
+          ))}
+          <p className="dempet">Varer uten valg blir liggende i kurven til senere.</p>
+        </div>
       )}
       <p className={sumOk === false ? 'feil' : 'dempet'}>
         Linjesum {kr(sumLinjer)} kr{typeof k.total === 'number' ? ` mot kvitteringens ${kr(k.total)} kr – ${sumOk ? 'stemmer' : 'avvik, noe kan mangle'}` : ''}

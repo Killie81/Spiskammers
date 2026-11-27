@@ -3,6 +3,7 @@ import { supabase, rpc, spørClaude, lastOppBilde } from '../supabase.js';
 import { krympBilde, lesStrekkode, tilBase64 } from '../bilde.js';
 import { holdbarTekst, kr, leggTilDager, andelFraVekt, nettoAv, gjettStykkvis, gjettAvdeling } from '../format.js';
 import Fotoknapp from '../deler/Fotoknapp.jsx';
+import { hentKurv, leggKurvILager } from '../kurv.js';
 import Kvittering from './Kvittering.jsx';
 import Ikon from '../deler/Ikon.jsx';
 import StedVelger from '../deler/StedVelger.jsx';
@@ -31,6 +32,19 @@ export default function Inn({ husstand, vis, gåTil, startModus = 'vare' }) {
   const [nyBeholder, setNyBeholder] = useState({ navn: '', vekt: '' });
 
   const [poser, setPoser] = useState(null);
+  // Varer fotografert i handlevogna som venter på kvitteringen.
+  const [kurv, setKurv] = useState([]);
+  const [kurvBekreft, setKurvBekreft] = useState(false);
+  useEffect(() => { hentKurv().then(setKurv).catch(() => {}); }, [modus]);
+  async function kurvUtenKvittering() {
+    try {
+      let n = 0;
+      for (const k of kurv) n += await leggKurvILager(k);
+      vis(`${n} pakninger fra handlevogna lagt i lageret (uten kvittering)`);
+      setKurv([]);
+    } catch (e) { vis(`Kunne ikke lagre: ${e.message}`); hentKurv().then(setKurv).catch(() => {}); }
+    setKurvBekreft(false);
+  }
   useEffect(() => {
     supabase.from('utgift').select('belop, antall').eq('type', 'pose').gte('dato', leggTilDager(null, -365))
       .then(({ data }) => setPoser({ kr: (data || []).reduce((a, u) => a + Number(u.belop), 0), stk: (data || []).reduce((a, u) => a + (u.antall || 1), 0) }));
@@ -146,6 +160,18 @@ export default function Inn({ husstand, vis, gåTil, startModus = 'vare' }) {
             <b>{kr(poser.kr)} kr på bæreposer siste år</b>
             <span>{poser.stk ? `${poser.stk} poser. ` : ''}Husk handlenettet neste gang!</span>
           </div>
+        </div>
+      )}
+      {kurv.length > 0 && modus === 'vare' && (
+        <div className="banner rolig kurvpåminner">
+          <Ikon navn="kurv" størrelse={22} />
+          <span><b>{kurv.length} {kurv.length === 1 ? 'vare' : 'varer'} fra handlevogna</b> venter på kvitteringen. De legges i lageret når kvitteringen er scannet.</span>
+          <span className="valg">
+            <button type="button" className="primær" onClick={() => setModus('kvittering')}>Skann kvittering</button>
+            {kurvBekreft
+              ? <button type="button" onClick={kurvUtenKvittering}>Ja, legg i lager uten pris</button>
+              : <button type="button" onClick={() => setKurvBekreft(true)}>Uten kvittering</button>}
+          </span>
         </div>
       )}
       <div className="bryter">
