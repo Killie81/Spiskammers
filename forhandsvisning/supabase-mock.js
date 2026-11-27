@@ -23,8 +23,12 @@ const HL = [
   { id: 'h7', navn: 'Tørkerull', antall: 1, avdeling: 'ikke_mat', kilde: 'manuell', begrunnelse: null, avkrysset: false, status: 'aktiv' },
 ];
 for (let i = 0; i < 5; i++) LAGER.push({ id: `b${i}`, produkt_id: 'pb', sted: 'bod', andel: 1, holdbarhet: d(4 + i % 2), dato_type: 'anslag', apnet: null, navn: 'Bananer', merke: null, pakning_mengde: 1, pakning_enhet: 'stk', stykkvis: true });
+LAGER.push({ id: 'k1', produkt_id: 'pk', sted: 'skap', andel: 1, holdbarhet: d(90), dato_type: 'best_for', apnet: null, navn: 'Kvikk Lunsj', merke: 'Freia', pakning_mengde: 47, pakning_enhet: 'g' });
+LAGER.push({ id: 'k2', produkt_id: 'pg', sted: 'skap', andel: 0.5, holdbarhet: d(60), dato_type: 'best_for', apnet: d(-1), apnet_av: 'Ola', navn: 'Smågodt', merke: null, pakning_mengde: 300, pakning_enhet: 'g' });
+const KAT = {"Lettmelk": "meieri", "Kjøttdeig": "kjott", "Norvegia": "meieri", "Laksefilet": "fisk", "Havregryn": "torrvarer", "Jasminris": "torrvarer", "Pepsi Max 1,5 l": "drikke", "Gulrøtter": "frukt_gront", "Lapskaus, 4 porsjoner": "hjemmelaget", "Bananer": "frukt_gront", "Kvikk Lunsj": "sotsaker", "Smågodt": "sotsaker"};
+LAGER.forEach((p) => { p.kategori = KAT[p.navn] || 'annet'; });
 LAGER.forEach((p) => { p.tara_g = p.navn === 'Lettmelk' ? 32 : null; p.netto_g = p.pakning_mengde; });
-const DATA = { produkt: [], beholder: [{ id: 'b1', navn: 'Krydderglass', vekt_g: 85 }, { id: 'b2', navn: 'Glassboks 1 l', vekt_g: 410 }], lager: LAGER, handleliste_vare: HL, unormal_uke: [{ uke: '2026-11-16' }], husstand: [{ id: 'h', navn: 'Hjemme', glass_ml: 300, handledag: 4, handletime: 14 }],
+const DATA = { produkt: [], beholder: [{ id: 'b1', navn: 'Krydderglass', vekt_g: 85 }, { id: 'b2', navn: 'Glassboks 1 l', vekt_g: 410 }], lager: LAGER, handleliste_vare: HL, unormal_uke: [{ uke: '2026-11-16' }], husstand: [{ id: 'h', navn: 'Hjemme', glass_ml: 300, handledag: 4, handletime: 14, personer: ['Kari', 'Ola', 'Nora', 'Per'] }],
   utgift: [{ type: 'pose', belop: 4.5, antall: 1 }, { type: 'pose', belop: 9, antall: 2 }, { type: 'pant', belop: 6 }], hendelse: [{ id: 'a' }, { id: 'b' }] };
 const kjede = (tabell) => { const svar = { data: DATA[tabell] || [], error: null };
   const k = new Proxy({}, { get: (_, p) => p === 'then' ? (r) => r(svar) : p === 'single' ? () => Promise.resolve({ data: (DATA[tabell] || [])[0], error: null }) : () => k });

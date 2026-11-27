@@ -70,6 +70,7 @@ export const AVDELINGER = [
   ['torrvarer', 'Tørrvarer'],
   ['hermetikk', 'Hermetikk'],
   ['frossen', 'Frysedisk'],
+  ['sotsaker', 'Søtsaker og snacks'],
   ['drikke', 'Drikke'],
   ['annet', 'Annet'],
   ['ikke_mat', 'Husholdning'],
@@ -78,6 +79,7 @@ export const avdelingNavn = (a) => (AVDELINGER.find(([k]) => k === a) || [a, 'An
 export const avdelingRekke = (a) => { const i = AVDELINGER.findIndex(([k]) => k === (a === 'hjemmelaget' ? 'annet' : a)); return i < 0 ? 10 : i; };
 
 const NØKKELORD = [
+  ['sotsaker', /sjokolade|godteri|smågodt|godis|chips|potetgull|lakris|seigmenn|snacks|twist|kvikk lunsj|non ?stop|smash|popcorn/],
   ['frukt_gront', /banan|eple|pære|appelsin|sitron|lime|drue|bær|agurk|tomat|salat|løk|potet|gulrot|paprika|brokkoli|kål|avokado|sopp|hvitløk|ingefær|frukt|grønt/],
   ['brod_bakst', /brød|rundstykk|lompe|tortilla|lefse|knekkebrød|baguett|boller|kake/],
   ['meieri', /melk|ost|yoghurt|smør|egg|fløte|rømme|kesam|cottage|biola|skyr|margarin/],
@@ -122,4 +124,32 @@ export const nettoAv = (mengde, enhet) => (enhet === 'g' || enhet === 'ml') && m
 const STYKKORD = /(banan|appelsin|klementin|mandarin|eple|pære|kiwi|avokado|nektarin|fersken|plomme|sitron|lime|mango|grapefrukt|granateple)/i;
 export function gjettStykkvis(navn) {
   return STYKKORD.test(navn || '');
+}
+
+// Typer i lageret, i den rekkefølgen de vises innenfor hvert lagringssted.
+export const TYPER = [
+  ['meieri', 'Meieri og egg'],
+  ['palegg', 'Pålegg'],
+  ['kjott', 'Kjøtt'],
+  ['fisk', 'Fisk'],
+  ['hjemmelaget', 'Hjemmelaget'],
+  ['frukt_gront', 'Frukt og grønt'],
+  ['brod_bakst', 'Brød og bakst'],
+  ['frossen', 'Frossenmat'],
+  ['torrvarer', 'Tørrvarer'],
+  ['hermetikk', 'Hermetikk'],
+  ['sotsaker', 'Søtsaker og snacks'],
+  ['drikke', 'Drikke'],
+  ['ikke_mat', 'Husholdning'],
+  ['annet', 'Annet'],
+];
+export const typeNavn = (t) => (TYPER.find(([k]) => k === t) || [t, 'Annet'])[1];
+const typeRekke = (t) => { const i = TYPER.findIndex(([k]) => k === (t || 'annet')); return i < 0 ? TYPER.length : i; };
+const stedRekke = (s) => { const i = STEDER.findIndex(([k]) => k === s); return i < 0 ? 99 : i; };
+
+// Lagringssted → type → alfabetisk.
+export function sorterLager(rader) {
+  return [...rader].sort((a, b) => stedRekke(a.sted) - stedRekke(b.sted)
+    || typeRekke(a.kategori) - typeRekke(b.kategori)
+    || a.navn.localeCompare(b.navn, 'nb'));
 }

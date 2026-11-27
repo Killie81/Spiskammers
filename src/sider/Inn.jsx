@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase, rpc, spørClaude, lastOppBilde } from '../supabase.js';
 import { krympBilde, lesStrekkode, tilBase64 } from '../bilde.js';
-import { holdbarTekst, kr, leggTilDager, andelFraVekt, nettoAv, gjettStykkvis } from '../format.js';
+import { holdbarTekst, kr, leggTilDager, andelFraVekt, nettoAv, gjettStykkvis, gjettAvdeling } from '../format.js';
 import Fotoknapp from '../deler/Fotoknapp.jsx';
 import Kvittering from './Kvittering.jsx';
 import Ikon from '../deler/Ikon.jsx';
@@ -25,6 +25,7 @@ export default function Inn({ husstand, vis, gåTil, startModus = 'vare' }) {
   const [full, setFull] = useState(null);            // true | false | null (ikke svart)
   const [metodeIkkeFull, setMetodeIkkeFull] = useState('anslag'); // anslag | emballasje | beholder
   const [emballasje, setEmballasje] = useState('');
+  const [fotoEmb, setFotoEmb] = useState(null);       // { materiale, anslag_g } fra bildet
   const [beholdere, setBeholdere] = useState([]);
   const [beholder, setBeholder] = useState('');      // id, eller 'ny'
   const [nyBeholder, setNyBeholder] = useState({ navn: '', vekt: '' });
@@ -48,7 +49,7 @@ export default function Inn({ husstand, vis, gåTil, startModus = 'vare' }) {
   }
 
   const sett = (k, x) => setV((o) => ({ ...o, [k]: x }));
-  const nullstill = () => { setFase('start'); setV(TOM); setBilde(null); setBlob(null); setFotoAndel(null); setDatoLest(false); setVekt(''); setKjent(null); setFull(null); setEmballasje(''); setBeholder(''); setNyBeholder({ navn: '', vekt: '' }); };
+  const nullstill = () => { setFase('start'); setV(TOM); setBilde(null); setBlob(null); setFotoAndel(null); setDatoLest(false); setVekt(''); setKjent(null); setFull(null); setEmballasje(''); setFotoEmb(null); setBeholder(''); setNyBeholder({ navn: '', vekt: '' }); };
 
   async function påBilde(fil) {
     setFase('leser'); setBilde(URL.createObjectURL(fil));
@@ -56,15 +57,21 @@ export default function Inn({ husstand, vis, gåTil, startModus = 'vare' }) {
       const { blob: b, canvas } = await krympBilde(fil);
       setBlob(b);
       const ean = await lesStrekkode(canvas);
-      const r = await spørClaude({ modus: 'vare', bilde: await tilBase64(b), ean });
+      const r = await spørClaude({ modus: 'vare', bilde: await tilBase64(b), ean, beholdere: beholdere.map(({ navn, vekt_g }) => ({ navn, vekt_g })) });
       const dato = typeof r.holdbarhet === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.holdbarhet) ? r.holdbarhet : '';
       const andel = typeof r.andel_igjen === 'number' ? Math.round(r.andel_igjen * 20) / 20 : 1;
       setFotoAndel(typeof r.andel_igjen === 'number' && r.andel_igjen < 0.95 ? andel : null);
       setDatoLest(Boolean(dato));
       if (r.vekt_g > 0) setVekt(String(Math.round(r.vekt_g)));
+      // Emballasje gjenkjent på bildet: standardbeholder velges, ellers foreslås anslått vekt.
+      const emb = r.emballasje && Number(r.emballasje.anslag_g) > 0 ? { materiale: r.emballasje.materiale, anslag_g: Math.round(r.emballasje.anslag_g) } : null;
+      setFotoEmb(emb);
+      if (emb) setEmballasje(String(emb.anslag_g));
+      const treff = r.beholder && beholdere.find((x) => x.navn.toLowerCase() === String(r.beholder).toLowerCase());
+      if (treff) { setMetodeIkkeFull('beholder'); setBeholder(treff.id); setFull(false); }
       setKjent(await finnKjent(ean || r.ean, r.vare).catch(() => null));
       setV({
-        ...TOM, vare: r.vare || '', merke: r.merke || '', ean: ean || r.ean || '', kategori: r.kategori || 'annet',
+        ...TOM, vare: r.vare || '', merke: r.merke || '', ean: ean || r.ean || '', kategori: String(r.kategori || 'annet').split(/[\s(]/)[0],
         pakning_mengde: r.pakning_mengde ?? '', pakning_enhet: r.pakning_enhet || 'stk', andel: andel >= 0.95 ? 1 : andel,
         holdbarhet: dato, dato_type: r.dato_type || 'best_for', lagringssted: r.lagringssted || 'kjoleskap',
         stykkvis: Boolean(r.stykkvis) || gjettStykkvis(r.vare), antall: Math.max(1, Math.min(99, parseInt(r.antall_stk, 10) || 1)),
@@ -84,7 +91,7 @@ export default function Inn({ husstand, vis, gåTil, startModus = 'vare' }) {
       const veid = !v.stykkvis && Number(vekt) > 0 ? Number(vekt) : null;
       const andelInn = v.stykkvis ? 1 : veid && kjentAndel != null ? kjentAndel : (veid && full && metodeIkkeFull !== 'beholder' ? 1 : v.andel);
       const ider = await rpc('registrer_inn', {
-        p_navn: v.vare.trim(), p_merke: v.merke || null, p_ean: v.ean || null, p_kategori: v.kategori,
+        p_navn: v.vare.trim(), p_merke: v.merke || null, p_ean: v.ean || null, p_kategori: v.kategori === 'annet' ? gjettAvdeling(v.vare) : v.kategori,
         p_mengde: v.stykkvis ? 1 : v.pakning_mengde === '' ? null : Number(v.pakning_mengde), p_enhet: v.stykkvis ? 'stk' : v.pakning_enhet, p_sted: v.lagringssted,
         p_antall: v.antall, p_andel: andelInn, p_holdbarhet: v.holdbarhet || null, p_dato_type: v.holdbarhet ? v.dato_type : null,
         p_pris: null, p_kvittering: null, p_metode: blob ? (v.ean ? 'strekkode' : 'foto') : 'manuelt', p_bilde: sti,
@@ -192,17 +199,17 @@ export default function Inn({ husstand, vis, gåTil, startModus = 'vare' }) {
                   <span className="etikett">Ny vare på vekta – er pakken full?</span>
                   <div className="valg">
                     <button type="button" className={full === true && metodeIkkeFull !== 'beholder' ? 'på' : ''} onClick={() => { setFull(true); setMetodeIkkeFull('anslag'); setBeholder(''); }}>Ja, full</button>
-                    <button type="button" className={full === false && metodeIkkeFull !== 'beholder' ? 'på' : ''} onClick={() => { setFull(false); setMetodeIkkeFull('anslag'); setBeholder(''); sett('andel', fotoAndel ?? 0.5); }}>Nei</button>
+                    <button type="button" className={full === false && metodeIkkeFull !== 'beholder' ? 'på' : ''} onClick={() => { setFull(false); setMetodeIkkeFull(fotoEmb ? 'emballasje' : 'anslag'); setBeholder(''); sett('andel', fotoAndel ?? 0.5); }}>Nei</button>
                     <button type="button" className={metodeIkkeFull === 'beholder' ? 'på' : ''} onClick={() => { setFull(full ?? true); setMetodeIkkeFull('beholder'); }}>Beholder</button>
                   </div>
                   {full === false && metodeIkkeFull !== 'beholder' && (
                     <div className="bryter liten">
                       <button type="button" className={metodeIkkeFull === 'anslag' ? 'på' : ''} onClick={() => setMetodeIkkeFull('anslag')}>Anslå hvor mye som er igjen</button>
-                      <button type="button" className={metodeIkkeFull === 'emballasje' ? 'på' : ''} onClick={() => setMetodeIkkeFull('emballasje')}>Oppgi emballasjevekt</button>
+                      <button type="button" className={metodeIkkeFull === 'emballasje' ? 'på' : ''} onClick={() => setMetodeIkkeFull('emballasje')}>{fotoEmb ? 'Emballasje fra bildet' : 'Oppgi emballasjevekt'}</button>
                     </div>
                   )}
                   {full === false && metodeIkkeFull === 'emballasje' && (
-                    <label>Emballasjevekt (g)<input inputMode="decimal" value={emballasje} onChange={(e) => setEmballasje(e.target.value.replace(',', '.'))} /></label>
+                    <label>Emballasjevekt (g){fotoEmb && <small className="dempet"> – anslått fra bildet ({fotoEmb.materiale}), rett hvis du vet bedre</small>}<input inputMode="decimal" value={emballasje} onChange={(e) => setEmballasje(e.target.value.replace(',', '.'))} /></label>
                   )}
                   {metodeIkkeFull === 'beholder' && (
                     <div className="skjema">

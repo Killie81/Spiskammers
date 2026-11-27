@@ -16,13 +16,15 @@ const MODEL = Deno.env.get("CLAUDE_MODEL") ?? "claude-sonnet-5-5";
 type Kandidat = { id: string; navn: string; merke?: string | null; ean?: string | null; sted: string; andel: number; holdbarhet?: string | null };
 
 const STEDER = "fryser, kjoleskap, bod, skap, skuffe";
-const KATEGORIER = "drikke, meieri, kjott, fisk, frukt_gront, brod_bakst, torrvarer, hermetikk, frossen, palegg, hjemmelaget, annet";
+const KATEGORIER = "drikke, meieri, kjott, fisk, frukt_gront, brod_bakst, torrvarer, hermetikk, frossen, palegg, sotsaker (sjokolade, godteri, chips, kjeks o.l.), hjemmelaget, annet";
 
 function idag() {
   return new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Oslo" });
 }
 
-function promptVare(ean: string | null) {
+type Beholder = { navn: string; vekt_g: number };
+
+function promptVare(ean: string | null, beholdere: Beholder[]) {
   return `Du ser et bilde av en matvare som skal registreres i en norsk husholdnings matlager.
 ${ean ? `Strekkoden er lest lokalt: ${ean}. Bruk den.` : "Ingen strekkode ble lest lokalt. Les sifrene hvis strekkoden er synlig."}
 Dagens dato er ${idag()}. Mangler året i en dato på pakningen, bruk det nærmeste året som gir en dato fremover i tid.
@@ -34,7 +36,9 @@ Svar KUN med ett JSON-objekt:
  "alternativer": liste med inntil 2 andre varer det kan være,
  "vekt_g": står varen på en kjøkkenvekt, tallet på displayet i gram (kg ganges med 1000), ellers null,
  "stykkvis": true for frukt og grønt som brukes ett og ett stykk (bananer, appelsiner, klementiner, epler, pærer, kiwi, avokado, sitroner o.l.), ellers false,
- "antall_stk": for stykkvarer antall stykker på bildet, ellers null}`;
+ "antall_stk": for stykkvarer antall stykker på bildet, ellers null,
+ "emballasje": {"materiale": "glass", "plast", "metall", "papp", "pose" eller "annet", "anslag_g": anslått vekt av den TOMME emballasjen i gram ut fra materiale og størrelse (f.eks. syltetøyglass 350 g ca. 180 g, plastboks 500 g ca. 25 g, hermetikkboks 400 g ca. 50 g, melkekartong 1 l ca. 32 g)} eller null,
+ "beholder": ${beholdere.length ? `står varen i en av husstandens standardbeholdere (${beholdere.map((b) => b.navn).join(", ")}), navnet på den, ellers null` : "null"}}`;
 }
 
 function promptUttak(ean: string | null, kandidater: Kandidat[]) {
@@ -52,7 +56,8 @@ Svar KUN med ett JSON-objekt:
  "andel_igjen": 0 til 1 avrundet til nærmeste 0,05 eller null hvis det ikke kan sees, "grunnlag_mengde": én kort setning,
  "sikkerhet": "lav", "middels" eller "hoy", "alternative_ider": inntil 2 andre id-er fra listen det kan være,
  "vekt_g": står varen på en kjøkkenvekt, tallet på displayet i gram (kg ganges med 1000), ellers null,
- "antall_stk": er varen frukt o.l. som telles i stk, antall stykker på bildet, ellers null}`;
+ "antall_stk": er varen frukt o.l. som telles i stk, antall stykker på bildet, ellers null,
+ "emballasje": {"materiale": "glass", "plast", "metall", "papp", "pose" eller "annet", "anslag_g": anslått vekt av den TOMME emballasjen i gram ut fra materiale og størrelse (f.eks. syltetøyglass 350 g ca. 180 g, plastboks 500 g ca. 25 g, hermetikkboks 400 g ca. 50 g, melkekartong 1 l ca. 32 g)} eller null}`;
 }
 
 function promptKvittering() {
@@ -106,13 +111,13 @@ Deno.serve(async (req) => {
     return json({ feil: "ANTHROPIC_API_KEY i Supabase har feil format. Lim inn bare nøkkelen (sk-ant-…), uten annen tekst." }, 500);
   }
 
-  let input: { modus: string; bilde: string; mediaType?: string; ean?: string | null; kandidater?: Kandidat[] };
+  let input: { modus: string; bilde: string; mediaType?: string; ean?: string | null; kandidater?: Kandidat[]; beholdere?: Beholder[] };
   try { input = await req.json(); } catch { return json({ feil: "Ugyldig forespørsel" }, 400); }
   if (!input?.bilde) return json({ feil: "Bilde mangler" }, 400);
 
   const prompt = input.modus === "kvittering" ? promptKvittering()
     : input.modus === "uttak" ? promptUttak(input.ean ?? null, (input.kandidater ?? []).slice(0, 300))
-    : promptVare(input.ean ?? null);
+    : promptVare(input.ean ?? null, (input.beholdere ?? []).slice(0, 50));
 
   const mediaType = input.mediaType ?? "image/jpeg";
   const kilde = mediaType === "application/pdf"
@@ -126,7 +131,7 @@ Deno.serve(async (req) => {
       headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: input.modus === "kvittering" ? 4000 : 800,
+        max_tokens: input.modus === "kvittering" ? 4000 : 1200,
         messages: [{ role: "user", content: [kilde, { type: "text", text: prompt }] }],
       }),
     });
