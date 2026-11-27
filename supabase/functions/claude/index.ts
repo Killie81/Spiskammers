@@ -60,7 +60,12 @@ Svar KUN med ett JSON-objekt:
  "emballasje": {"materiale": "glass", "plast", "metall", "papp", "pose" eller "annet", "anslag_g": anslått vekt av den TOMME emballasjen i gram ut fra materiale og størrelse (f.eks. syltetøyglass 350 g ca. 180 g, plastboks 500 g ca. 25 g, hermetikkboks 400 g ca. 50 g, melkekartong 1 l ca. 32 g)} eller null}`;
 }
 
-function promptKvittering() {
+type KurvVare = { id: string; navn: string; merke?: string | null; mengde?: number | null; enhet?: string | null; antall?: number };
+
+function promptKvittering(kurv: KurvVare[]) {
+  const kurvliste = kurv.map((k) =>
+    `- id=${k.id} | ${k.merke ? `${k.merke} ` : ""}${k.navn}${k.mengde ? ` ${k.mengde} ${k.enhet ?? ""}` : ""} | ${k.antall ?? 1} stk`
+  ).join("\n");
   return `Du ser en kvittering fra en norsk dagligvarebutikk. Tolk den slik at varene kan registreres i en husholdnings matlager.
 Dagens dato er ${idag()}.
 Regler:
@@ -72,11 +77,14 @@ Regler:
 - Annen løsvekt (grønnsaker, ost i disk) får antall 1 og vekten som pakning_mengde i g.
 - Anslå typisk holdbarhet i dager fra kjøp for hver matvare.
 - Er du usikker på en forkortelse, gjett beste vare og sett sikker til false.
+${kurv.length ? `- Disse varene ble fotografert i handlevogna før betaling. Finn kvitteringslinjen hver av dem tilsvarer
+  (kvitteringen bruker ofte forkortelser) og sett kurv_id på linjen. Hver kurv-id brukes på høyst én linje.
+${kurvliste}` : ""}
 Svar KUN med ett JSON-objekt:
 {"butikk": streng eller null, "dato": "ÅÅÅÅ-MM-DD" eller null, "total": tall eller null,
  "linjer": [{"tekst": teksten på kvitteringen, "vare": kort norsk varenavn, "kategori": en av ${KATEGORIER}, "antall": heltall,
  "pakning_mengde": tall eller null, "pakning_enhet": "ml", "g" eller "stk", "pris": linjens totalpris etter rabatt,
- "type": "mat", "pant", "pose" eller "ikke_mat", "lagringssted": en av ${STEDER}, "holdbarhet_dager": heltall eller null, "stykkvis": true eller false, "sikker": true eller false}]}`;
+ "type": "mat", "pant", "pose" eller "ikke_mat", "lagringssted": en av ${STEDER}, "holdbarhet_dager": heltall eller null, "stykkvis": true eller false, "sikker": true eller false${kurv.length ? `, "kurv_id": id fra handlevogna eller null` : ""}}]}`;
 }
 
 // Supabase gir funksjonen prosjektets offentlige nøkkel, enten som gammel anon-nøkkel eller ny publishable-nøkkel.
@@ -111,11 +119,11 @@ Deno.serve(async (req) => {
     return json({ feil: "ANTHROPIC_API_KEY i Supabase har feil format. Lim inn bare nøkkelen (sk-ant-…), uten annen tekst." }, 500);
   }
 
-  let input: { modus: string; bilde: string; mediaType?: string; ean?: string | null; kandidater?: Kandidat[]; beholdere?: Beholder[] };
+  let input: { modus: string; bilde: string; mediaType?: string; ean?: string | null; kandidater?: Kandidat[]; beholdere?: Beholder[]; kurv?: KurvVare[] };
   try { input = await req.json(); } catch { return json({ feil: "Ugyldig forespørsel" }, 400); }
   if (!input?.bilde) return json({ feil: "Bilde mangler" }, 400);
 
-  const prompt = input.modus === "kvittering" ? promptKvittering()
+  const prompt = input.modus === "kvittering" ? promptKvittering((input.kurv ?? []).slice(0, 150))
     : input.modus === "uttak" ? promptUttak(input.ean ?? null, (input.kandidater ?? []).slice(0, 300))
     : promptVare(input.ean ?? null, (input.beholdere ?? []).slice(0, 50));
 

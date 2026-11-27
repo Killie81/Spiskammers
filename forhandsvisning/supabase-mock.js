@@ -14,7 +14,7 @@ const LAGER = [
   { id: '8', produkt_id: 'p8', sted: 'kjoleskap', andel: 0.9, holdbarhet: null, dato_type: null, apnet: d(-1), navn: 'Lapskaus, 4 porsjoner', merke: null, pakning_mengde: null, pakning_enhet: 'stk' },
 ];
 const HL = [
-  { id: 'h1', navn: 'Lettmelk', antall: 4, avdeling: 'meieri', kilde: 'forslag', begrunnelse: 'Bruker ca. 3,0 pk/uke, nok til 1 d', avkrysset: false, status: 'aktiv' },
+  { id: 'h1', navn: 'Lettmelk', antall: 4, avdeling: 'meieri', kilde: 'forslag', begrunnelse: 'Bruker ca. 3,0 pk/uke, nok til 1 d', avkrysset: true, status: 'aktiv' },
   { id: 'h2', navn: 'Agurk', antall: 1, avdeling: 'frukt_gront', kilde: 'forslag', begrunnelse: 'Bruker ca. 1,0 pk/uke, nok til 7 d · ofte kastet, foreslår mindre', avkrysset: false, status: 'aktiv' },
   { id: 'h3', navn: 'Bananer', antall: 6, avdeling: 'frukt_gront', kilde: 'manuell', begrunnelse: null, avkrysset: true, status: 'aktiv' },
   { id: 'h4', navn: 'Kaffe', antall: 1, avdeling: 'torrvarer', kilde: 'fast', begrunnelse: 'Fast vare', avkrysset: false, status: 'aktiv' },
@@ -28,7 +28,11 @@ LAGER.push({ id: 'k2', produkt_id: 'pg', sted: 'skap', andel: 0.5, holdbarhet: d
 const KAT = {"Lettmelk": "meieri", "Kjøttdeig": "kjott", "Norvegia": "meieri", "Laksefilet": "fisk", "Havregryn": "torrvarer", "Jasminris": "torrvarer", "Pepsi Max 1,5 l": "drikke", "Gulrøtter": "frukt_gront", "Lapskaus, 4 porsjoner": "hjemmelaget", "Bananer": "frukt_gront", "Kvikk Lunsj": "sotsaker", "Smågodt": "sotsaker"};
 LAGER.forEach((p) => { p.kategori = KAT[p.navn] || 'annet'; });
 LAGER.forEach((p) => { p.tara_g = p.navn === 'Lettmelk' ? 32 : null; p.netto_g = p.pakning_mengde; });
-const DATA = { produkt: [], beholder: [{ id: 'b1', navn: 'Krydderglass', vekt_g: 85 }, { id: 'b2', navn: 'Glassboks 1 l', vekt_g: 410 }], lager: LAGER, handleliste_vare: HL, unormal_uke: [{ uke: '2026-11-16' }], husstand: [{ id: 'h', navn: 'Hjemme', glass_ml: 300, handledag: 4, handletime: 14, personer: ['Kari', 'Ola', 'Nora', 'Per'] }],
+const KURV = [
+  { id: 'kv1', handleliste_id: 'h1', navn: 'Lettmelk', merke: 'Tine', pakning_mengde: 1, pakning_enhet: 'l', holdbarhet: d(9), lagringssted: 'kjoleskap', antall: 4, status: 'i_kurv' },
+  { id: 'kv2', handleliste_id: null, navn: 'Kvikk Lunsj 3-pk', merke: 'Freia', pakning_mengde: 141, pakning_enhet: 'g', holdbarhet: d(200), lagringssted: 'skap', antall: 1, status: 'i_kurv' },
+];
+const DATA = { kurv_vare: KURV, produkt: [], beholder: [{ id: 'b1', navn: 'Krydderglass', vekt_g: 85 }, { id: 'b2', navn: 'Glassboks 1 l', vekt_g: 410 }], lager: LAGER, handleliste_vare: HL, unormal_uke: [{ uke: '2026-11-16' }], husstand: [{ id: 'h', navn: 'Hjemme', glass_ml: 300, handledag: 4, handletime: 14, personer: ['Kari', 'Ola', 'Nora', 'Per'] }],
   utgift: [{ type: 'pose', belop: 4.5, antall: 1 }, { type: 'pose', belop: 9, antall: 2 }, { type: 'pant', belop: 6 }], hendelse: [{ id: 'a' }, { id: 'b' }] };
 const kjede = (tabell) => { const svar = { data: DATA[tabell] || [], error: null };
   const k = new Proxy({}, { get: (_, p) => p === 'then' ? (r) => r(svar) : p === 'single' ? () => Promise.resolve({ data: (DATA[tabell] || [])[0], error: null }) : () => k });
@@ -43,6 +47,10 @@ export async function hentLager() { return LAGER; }
 export async function spørClaude(b) {
   if (b.modus === 'uttak' && globalThis.MOCK_BANAN) return { pakning_id: 'b0', vare: 'Banan', antall_stk: 2, andel_igjen: null, grunnlag_mengde: 'To bananer' };
   if (b.modus === 'uttak') return { pakning_id: '1', vare: 'Lettmelk', andel_igjen: 0.4, vekt_g: 452, grunnlag_mengde: 'Anslått fra bildet' };
+  if (b.modus === 'kvittering') return { butikk: 'Rema 1000 Finnsnes', dato: d(0), total: 132.4, linjer: [
+    { tekst: 'TINE LETTMELK 1L', vare: 'Lettmelk', kategori: 'meieri', antall: 4, pris: 87.6, type: 'mat', lagringssted: 'kjoleskap', holdbarhet_dager: 8, kurv_id: 'kv1', sikker: true },
+    { tekst: 'AGURK', vare: 'Agurk', kategori: 'frukt_gront', antall: 1, pris: 19.9, type: 'mat', lagringssted: 'kjoleskap', holdbarhet_dager: 7, kurv_id: null, sikker: true },
+    { tekst: 'BÆREPOSE', vare: 'Bærepose', antall: 1, pris: 4.5, type: 'pose' } ] };
   return { vare: 'Nugatti Original', merke: 'Orkla', kategori: 'palegg', ean: '7021010001057', pakning_mengde: 500, pakning_enhet: 'g', andel_igjen: 1, holdbarhet: null, lagringssted: 'skap', vekt_g: 521 };
 }
 export async function lastOppBilde() { return null; }

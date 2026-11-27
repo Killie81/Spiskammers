@@ -2,6 +2,18 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase, rpc, hentLager } from '../supabase.js';
 import { AVDELINGER, avdelingNavn, avdelingRekke, gjettAvdeling, grupper, nesteHandledag, stedNavn } from '../format.js';
 import Ikon from '../deler/Ikon.jsx';
+import { hentKurv, fotograferTilKurv, fjernFraKurv, kurvTekst } from '../kurv.js';
+
+// Lite kameraikon på raden: bildet tas i handlevogna og leses av Claude.
+function KurvFoto({ onFil, laster, etikett, stor }) {
+  return (
+    <label className={`hrad-foto${laster ? ' laster' : ''}`} aria-label={etikett}>
+      <input type="file" accept="image/*" capture="environment" disabled={laster}
+        onChange={(e) => { const f = e.target.files[0]; e.target.value = ''; if (f) onFil(f); }} />
+      {laster ? <span className="spinn" /> : <Ikon navn="kamera" størrelse={stor ? 26 : 20} />}
+    </label>
+  );
+}
 
 const KILDE = { forslag: 'Forslag', fast: 'Fast', manuell: 'Lagt til' };
 
@@ -15,14 +27,18 @@ export default function Handleliste({ husstand, vis, gåTil }) {
   const [tur, setTur] = useState(false);
   const [ferdig, setFerdig] = useState(false);
   const [oppdaterer, setOppdaterer] = useState(false);
+  const [kurv, setKurv] = useState([]);
+  const [laster, setLaster] = useState({}); // rad-id (eller 'ekstra') → bildet leses
 
   const last = useCallback(async () => {
-    const [{ data, error }, l] = await Promise.all([
+    const [{ data, error }, l, k] = await Promise.all([
       supabase.from('handleliste_vare').select('*').eq('status', 'aktiv').order('opprettet'),
       hentLager().catch(() => []),
+      hentKurv().catch(() => []),
     ]);
     if (error) vis(error.message); else setVarer(data);
     setLager(l);
+    setKurv(k);
   }, [vis]);
 
   useEffect(() => {
@@ -40,7 +56,35 @@ export default function Handleliste({ husstand, vis, gåTil }) {
     if (error) { vis(`Kunne ikke lagre: ${error.message}`); last(); }
   }
 
-  const kryss = (v) => oppdater(v.id, { avkrysset: !v.avkrysset, avkrysset_tid: v.avkrysset ? null : new Date().toISOString() });
+  const kurvFor = (id) => kurv.find((k) => k.handleliste_id === id);
+  const ekstra = kurv.filter((k) => !k.handleliste_id);
+
+  async function kryss(v) {
+    await oppdater(v.id, { avkrysset: !v.avkrysset, avkrysset_tid: v.avkrysset ? null : new Date().toISOString() });
+    // Tas varen ut av kurven, forsvinner også bildet av den.
+    const k = v.avkrysset && kurvFor(v.id);
+    if (k) { await fjernFraKurv(k).catch(() => {}); setKurv((ks) => ks.filter((x) => x.id !== k.id)); }
+  }
+
+  // Bilde i handlevogna: varen krysses av og legges i kurven med navn, størrelse og dato.
+  async function foto(v, fil) {
+    const nøkkel = v ? v.id : 'ekstra';
+    setLaster((l) => ({ ...l, [nøkkel]: true }));
+    try {
+      const k = await fotograferTilKurv(fil, husstand, v);
+      if (v && !v.avkrysset) await oppdater(v.id, { avkrysset: true, avkrysset_tid: new Date().toISOString() });
+      setKurv((ks) => [...ks.filter((x) => !(v && x.handleliste_id === v.id)), k]);
+      vis(`I kurven: ${kurvTekst(k)}`);
+    } catch (e) {
+      vis(`Bildet kunne ikke leses: ${e.message}`);
+    }
+    setLaster((l) => ({ ...l, [nøkkel]: false }));
+  }
+
+  async function fjernEkstra(k) {
+    try { await fjernFraKurv(k); setKurv((ks) => ks.filter((x) => x.id !== k.id)); vis(`${k.navn} tatt ut av kurven`); }
+    catch (e) { vis(e.message); }
+  }
 
   async function fjern(v) {
     setVarer((vs) => vs.filter((x) => x.id !== v.id));
@@ -98,10 +142,13 @@ export default function Handleliste({ husstand, vis, gåTil }) {
         <span className="sjekkboks">{v.avkrysset && <Ikon navn="sjekk" størrelse={stor ? 26 : 20} />}</span>
         <span className="hrad-tekst">
           <b>{v.navn}{v.antall > 1 && <span className="antall"> × {v.antall}</span>}</b>
-          {!stor && v.begrunnelse && <small>{v.begrunnelse}</small>}
+          {kurvFor(v.id)
+            ? <small className="kurvinfo"><Ikon navn="kamera" størrelse={13} /> {kurvTekst(kurvFor(v.id))}</small>
+            : !stor && v.begrunnelse && <small>{v.begrunnelse}</small>}
         </span>
         {!stor && <span className={`kilde kilde-${v.kilde}`}>{v.kilde === 'fast' && <Ikon navn="stjerne" størrelse={12} />}{KILDE[v.kilde]}</span>}
       </button>
+      <KurvFoto stor={stor} laster={laster[v.id]} etikett={`Ta bilde av ${v.navn}`} onFil={(f) => foto(v, f)} />
       {!stor && (
         <button type="button" className="hrad-mer" aria-label={`Valg for ${v.navn}`} aria-expanded={åpen === v.id}
           onClick={() => setÅpen(åpen === v.id ? null : v.id)}><Ikon navn="prikker" størrelse={20} /></button>
@@ -134,6 +181,14 @@ export default function Handleliste({ husstand, vis, gåTil }) {
           <Ikon navn="oppdater" størrelse={18} /> {oppdaterer ? 'Beregner …' : 'Oppdater forslag'}
         </button>
       </div>
+
+      {kurv.length > 0 && !ferdig && (
+        <div className="banner rolig">
+          <Ikon navn="kurv" størrelse={22} />
+          <span><b>{kurv.length} {kurv.length === 1 ? 'vare' : 'varer'} i kurven</b> venter på kvitteringen.</span>
+          <button type="button" className="primær" onClick={() => gåTil('inn', 'kvittering')}>Kvittering</button>
+        </div>
+      )}
 
       {ferdig && (
         <div className="banner rolig">
@@ -192,15 +247,34 @@ export default function Handleliste({ husstand, vis, gåTil }) {
           <ul className="hliste">{vanlige.filter((v) => v.avdeling === a).map((v) => rad(v))}</ul>
         </div>
       ))}
+      {ekstra.length > 0 && (
+        <div className="avdeling">
+          <h3>I kurven, utenfor listen</h3>
+          <ul className="hliste">{ekstra.map((k) => <EkstraRad key={k.id} k={k} onFjern={fjernEkstra} />)}</ul>
+        </div>
+      )}
       {!varer.length && <p className="tomt">Listen er tom. Forslag kommer torsdag kl. 14, eller trykk «Oppdater forslag».</p>}
 
-      {tur && <Handletur varer={vanlige} rad={rad} onFerdig={() => { setTur(false); setFerdig(true); last(); }} onLukk={() => setTur(false)} />}
+      {tur && <Handletur varer={vanlige} rad={rad} ekstra={ekstra} onFjernEkstra={fjernEkstra}
+        ekstraFoto={<KurvFoto stor laster={laster.ekstra} etikett="Ta bilde av vare utenfor listen" onFil={(f) => foto(null, f)} />} onFerdig={() => { setTur(false); setFerdig(true); last(); }} onLukk={() => setTur(false)} />}
     </section>
   );
 }
 
 // Fullskjerm i butikken: store linjer, avkryssede nederst, skjermen holdes på.
-function Handletur({ varer, rad, onFerdig, onLukk }) {
+function EkstraRad({ k, onFjern, stor }) {
+  return (
+    <li className={`hrad tatt ekstra${stor ? ' stor' : ''}`}>
+      <div className="hrad-hoved">
+        <span className="sjekkboks"><Ikon navn="kamera" størrelse={stor ? 22 : 18} /></span>
+        <span className="hrad-tekst"><b>{k.navn}{k.antall > 1 && <span className="antall"> × {k.antall}</span>}</b><small className="kurvinfo">{kurvTekst(k)}</small></span>
+      </div>
+      <button type="button" className="hrad-mer" aria-label={`Ta ${k.navn} ut av kurven`} onClick={() => onFjern(k)}><Ikon navn="kryss" størrelse={20} /></button>
+    </li>
+  );
+}
+
+function Handletur({ varer, rad, ekstra, onFjernEkstra, ekstraFoto, onFerdig, onLukk }) {
   const lås = useRef(null);
   useEffect(() => {
     (async () => { try { lås.current = await navigator.wakeLock?.request('screen'); } catch { /* ikke støttet */ } })();
@@ -229,10 +303,17 @@ function Handletur({ varer, rad, onFerdig, onLukk }) {
           </div>
         ))}
         {!igjen.length && <p className="tomt midt-tekst">Alt er i kurven. Trykk «Ferdig» og registrer kvitteringen hjemme.</p>}
-        {tatt.length > 0 && (
+        <div className="utenfor-listen">
+          {ekstraFoto}
+          <span><b>Vare som ikke står på listen?</b><small>Ta bilde, så kommer den med i kurven</small></span>
+        </div>
+        {(tatt.length > 0 || ekstra.length > 0) && (
           <div className="avdeling i-kurven">
-            <h3>I kurven ({tatt.length})</h3>
-            <ul className="hliste">{tatt.map((v) => rad(v, true))}</ul>
+            <h3>I kurven ({tatt.length + ekstra.length})</h3>
+            <ul className="hliste">
+              {tatt.map((v) => rad(v, true))}
+              {ekstra.map((k) => <EkstraRad key={k.id} k={k} stor onFjern={onFjernEkstra} />)}
+            </ul>
           </div>
         )}
       </div>

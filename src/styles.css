@@ -376,3 +376,23 @@ summary { min-height: 48px; display: flex; align-items: center; color: var(--sof
 .søtsak-hvem .valg { margin: 0; }
 .ny-beholder.ny-person { grid-template-columns: 1fr auto; }
 .skjema .tekst p { margin: 0 0 8px; }
+.hrad { grid-template-columns: minmax(0, 1fr) auto auto; }
+.hrad-foto { position: relative; display: grid; place-items: center; width: 52px; border-left: 1px solid var(--line); color: var(--fjord); cursor: pointer; }
+.hrad.stor .hrad-foto { width: 68px; }
+.hrad-foto input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.hrad-foto.laster { color: var(--soft); }
+.hrad-tekst small.kurvinfo { display: flex; align-items: center; gap: 5px; color: var(--fjord); font-weight: 600; text-decoration: none; }
+.hrad.tatt .hrad-tekst small.kurvinfo { color: var(--fjord); }
+.hrad.ekstra .sjekkboks { color: #fff; display: grid; place-items: center; }
+.utenfor-listen { display: flex; align-items: center; gap: 14px; margin: 18px 0 6px; padding: 12px 14px; border: 1px dashed var(--line); border-radius: 14px; background: var(--flate); }
+.utenfor-listen .hrad-foto { width: 56px; height: 56px; border: 0; border-radius: 12px; background: var(--flate-2); }
+.utenfor-listen span { display: grid; }
+.utenfor-listen small { color: var(--soft); font-size: 13px; }
+.linje .rå.kurvinfo { display: flex; align-items: center; gap: 5px; color: var(--fjord); font-weight: 600; font-style: normal; }
+.kurv-ikke-funnet .ekstralinje { flex-wrap: wrap; gap: 8px; }
+.kurv-ikke-funnet .valg { margin: 0; }
+.kurvpåminner { flex-wrap: wrap; }
+.kurvpåminner .valg { width: 100%; margin: 4px 0 0; }
+.kurvpåminner .valg { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 8px; grid-column: 1 / -1; }
+.kurvpåminner .valg button { margin: 0; justify-self: auto; align-self: auto; }
+.banner.rolig.kurvpåminner .valg .primær { margin-left: 0; }
