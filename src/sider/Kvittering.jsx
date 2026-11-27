@@ -55,7 +55,7 @@ export default function Kvittering({ husstand, vis, gåTil }) {
       for (const l of linjer.filter((x) => x.med && (x.type === 'mat' || x.type === 'ikke_mat'))) {
         const stykk = l.stykkvis ?? gjettStykkvis(l.vare);
         const ider = await rpc('registrer_inn', {
-          p_navn: l.vare || l.tekst, p_merke: null, p_ean: null, p_kategori: l.kategori || 'annet',
+          p_navn: l.vare || l.tekst, p_merke: null, p_ean: null, p_kategori: String(l.kategori || 'annet').split(/[\s(]/)[0],
           p_mengde: stykk ? 1 : l.pakning_mengde ?? null, p_enhet: stykk ? 'stk' : l.pakning_enhet || 'stk', p_sted: l.lagringssted || 'skap',
           p_antall: l.antall, p_andel: 1,
           p_holdbarhet: l.holdbarhet_dager ? leggTilDager(dato, l.holdbarhet_dager) : null,

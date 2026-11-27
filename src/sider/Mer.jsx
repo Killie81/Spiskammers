@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../supabase.js';
+import { supabase, rpc } from '../supabase.js';
 import { kr, leggTilDager, ukeStart } from '../format.js';
 import Ikon from '../deler/Ikon.jsx';
 
@@ -19,6 +19,30 @@ export default function Mer({ husstand, setHusstand, vis }) {
       setTall({ poser: s('pose'), pant: s('pant'), svinn: (svinn || []).length });
     })().catch(() => setTall({ poser: 0, pant: 0, svinn: 0 }));
   }, []);
+
+  // Familien: hvem kan åpne søtsaker, og hvem har åpnet hva siste 30 dager.
+  const [nyPerson, setNyPerson] = useState('');
+  const [søtsaker, setSøtsaker] = useState({});
+  useEffect(() => {
+    supabase.from('pakning').select('apnet_av').not('apnet_av', 'is', null).gte('apnet', leggTilDager(null, -30))
+      .then(({ data }) => setSøtsaker((data || []).reduce((m, r) => ({ ...m, [r.apnet_av]: (m[r.apnet_av] || 0) + 1 }), {})));
+  }, []);
+  async function lagrePersoner(personer) {
+    const { data, error } = await supabase.from('husstand').update({ personer }).eq('id', husstand.id).select().single();
+    if (error) return vis(error.message);
+    setHusstand(data);
+  }
+
+  // Prøvetid: start statistikken på nytt.
+  const [bekreftNullstill, setBekreftNullstill] = useState(false);
+  async function nullstill() {
+    try {
+      const n = await rpc('nullstill_statistikk');
+      vis(`Statistikken starter på nytt fra i dag (${n} uttak regnes som prøving)`);
+      setTall((t) => ({ ...t, svinn: 0 }));
+    } catch (e) { vis(e.message); }
+    setBekreftNullstill(false);
+  }
 
   // Unormale uker (ferie, høytid) holdes utenfor når handlelisten beregner forbruket.
   const uker = [0, 1, 2, 3].map((n) => ukeStart(new Date(Date.now() - n * 7 * 864e5)));
@@ -94,6 +118,42 @@ export default function Mer({ husstand, setHusstand, vis }) {
           <input placeholder="Tom vekt (g)" inputMode="decimal" value={ny.vekt} onChange={(e) => setNy({ ...ny, vekt: e.target.value.replace(',', '.') })} aria-label="Tom vekt i gram" />
           <button type="submit" className="primær">Legg til</button>
         </form>
+      </div>
+      <div className="kort skjema">
+        <h2>Familien</h2>
+        <p className="dempet">Når noen åpner en pakke med søtsaker, spør appen hvem det er.</p>
+        <ul className="beholderliste">
+          {(husstand.personer || []).map((n) => (
+            <li key={n}>
+              <span><b>{n}</b></span>
+              <span className="dempet">{søtsaker[n] ? `${søtsaker[n]} søtsaker åpnet siste 30 d` : ''}</span>
+              <button type="button" className="lenke" onClick={() => lagrePersoner(husstand.personer.filter((x) => x !== n))}>Fjern</button>
+            </li>
+          ))}
+          {!(husstand.personer || []).length && <li className="dempet">Ingen lagt inn ennå.</li>}
+        </ul>
+        <form className="ny-beholder ny-person" onSubmit={(e) => {
+          e.preventDefault();
+          const n = nyPerson.trim();
+          if (n && !(husstand.personer || []).includes(n)) lagrePersoner([...(husstand.personer || []), n]);
+          setNyPerson('');
+        }}>
+          <input placeholder="Navn" value={nyPerson} onChange={(e) => setNyPerson(e.target.value)} aria-label="Navn" />
+          <button type="submit" className="primær">Legg til</button>
+        </form>
+      </div>
+      <div className="kort skjema">
+        <h2>Prøvetid</h2>
+        <div className="tekst"><p className="dempet">Varer som er feilregistrert eller lagt inn for å prøve, fjernes under Lager → velg varen → <b>Fjern</b>. Det teller ikke som forbruk eller svinn.</p>
+        <p className="dempet">Når dere tar appen i bruk for alvor, kan statistikken startes på nytt. Alt forbruk og svinn til nå regnes da som prøving, og handlelisten lærer bare av det som skjer fra i dag. Lageret blir som det er.</p></div>
+        {bekreftNullstill ? (
+          <div className="valg">
+            <button type="button" className="kastet" onClick={nullstill}>Ja, start statistikken på nytt</button>
+            <button type="button" className="lenke" onClick={() => setBekreftNullstill(false)}>Avbryt</button>
+          </div>
+        ) : (
+          <div className="valg"><button type="button" onClick={() => setBekreftNullstill(true)}>Start statistikken på nytt</button></div>
+        )}
       </div>
       <div className="kort skjema">
         <h2>Unormale uker</h2>
