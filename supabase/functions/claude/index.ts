@@ -131,7 +131,7 @@ Deno.serve(async (req) => {
       headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: input.modus === "kvittering" ? 4000 : 800,
+        max_tokens: input.modus === "kvittering" ? 4000 : 1200,
         messages: [{ role: "user", content: [kilde, { type: "text", text: prompt }] }],
       }),
     });
