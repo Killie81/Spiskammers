@@ -234,6 +234,13 @@ export default function Handleliste({ husstand, vis, gåTil }) {
         </div>
       )}
 
+      <label className={`impulsknapp${laster.ekstra ? ' laster' : ''}`}>
+        <input type="file" accept="image/*" capture="environment" disabled={laster.ekstra}
+          onChange={(e) => { const f = e.target.files[0]; e.target.value = ''; if (f) foto(null, f); }} />
+        <span className="impuls-ikon">{laster.ekstra ? <span className="spinn" /> : <Ikon navn="kamera" størrelse={24} />}</span>
+        <span><b>Impulskjøp</b><small>Ta bilde av en vare som ikke står på listen</small></span>
+      </label>
+
       {vanlige.length > 0 && (
         <button type="button" className="kamera tur-knapp" onClick={() => { setTur(true); setÅpen(null); }}>
           <span className="knapp-ikon"><Ikon navn="kurv" størrelse={30} /></span>
@@ -249,14 +256,14 @@ export default function Handleliste({ husstand, vis, gåTil }) {
       ))}
       {ekstra.length > 0 && (
         <div className="avdeling">
-          <h3>I kurven, utenfor listen</h3>
+          <h3>Impulskjøp i kurven</h3>
           <ul className="hliste">{ekstra.map((k) => <EkstraRad key={k.id} k={k} onFjern={fjernEkstra} />)}</ul>
         </div>
       )}
       {!varer.length && <p className="tomt">Listen er tom. Forslag kommer torsdag kl. 14, eller trykk «Oppdater forslag».</p>}
 
       {tur && <Handletur varer={vanlige} rad={rad} ekstra={ekstra} onFjernEkstra={fjernEkstra}
-        ekstraFoto={<KurvFoto stor laster={laster.ekstra} etikett="Ta bilde av vare utenfor listen" onFil={(f) => foto(null, f)} />} onFerdig={() => { setTur(false); setFerdig(true); last(); }} onLukk={() => setTur(false)} />}
+        laster={laster.ekstra} onImpuls={(f) => foto(null, f)} onFerdig={() => { setTur(false); setFerdig(true); last(); }} onLukk={() => setTur(false)} />}
     </section>
   );
 }
@@ -274,7 +281,7 @@ function EkstraRad({ k, onFjern, stor }) {
   );
 }
 
-function Handletur({ varer, rad, ekstra, onFjernEkstra, ekstraFoto, onFerdig, onLukk }) {
+function Handletur({ varer, rad, ekstra, onFjernEkstra, laster, onImpuls, onFerdig, onLukk }) {
   const lås = useRef(null);
   useEffect(() => {
     (async () => { try { lås.current = await navigator.wakeLock?.request('screen'); } catch { /* ikke støttet */ } })();
@@ -295,6 +302,13 @@ function Handletur({ varer, rad, ekstra, onFjernEkstra, ekstraFoto, onFerdig, on
         <div className="fremdrift"><b>{tatt.length} av {varer.length} i kurven</b><div className="spor"><span style={{ width: `${varer.length ? (tatt.length / varer.length) * 100 : 0}%` }} /></div></div>
         <button type="button" className="primær" onClick={onFerdig}>Ferdig</button>
       </header>
+      {/* Impulskjøp: alltid synlig nede i hjørnet under handleturen. */}
+      <label className={`impuls-flytende${laster ? ' laster' : ''}`} aria-label="Impulskjøp – ta bilde av vare som ikke står på listen">
+        <input type="file" accept="image/*" capture="environment" disabled={laster}
+          onChange={(e) => { const f = e.target.files[0]; e.target.value = ''; if (f) onImpuls(f); }} />
+        {laster ? <span className="spinn" /> : <Ikon navn="kamera" størrelse={26} />}
+        <span>Impulskjøp</span>
+      </label>
       <div className="tur-innhold">
         {avdelinger.map((a) => (
           <div key={a} className="avdeling">
@@ -303,10 +317,6 @@ function Handletur({ varer, rad, ekstra, onFjernEkstra, ekstraFoto, onFerdig, on
           </div>
         ))}
         {!igjen.length && <p className="tomt midt-tekst">Alt er i kurven. Trykk «Ferdig» og registrer kvitteringen hjemme.</p>}
-        <div className="utenfor-listen">
-          {ekstraFoto}
-          <span><b>Vare som ikke står på listen?</b><small>Ta bilde, så kommer den med i kurven</small></span>
-        </div>
         {(tatt.length > 0 || ekstra.length > 0) && (
           <div className="avdeling i-kurven">
             <h3>I kurven ({tatt.length + ekstra.length})</h3>
