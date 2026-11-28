@@ -6,12 +6,14 @@ import Inn from './sider/Inn.jsx';
 import Lager from './sider/Lager.jsx';
 import Handleliste from './sider/Handleliste.jsx';
 import Mer from './sider/Mer.jsx';
+import Kokebok from './sider/Kokebok.jsx';
 import Ikon from './deler/Ikon.jsx';
 
 const FANER = [
   ['uttak', 'Ta ut', 'ut'],
   ['inn', 'Legg inn', 'inn'],
   ['handle', 'Handle', 'kurv'],
+  ['kokebok', 'Kokebok', 'bok'],
   ['lager', 'Lager', 'lager'],
   ['mer', 'Mer', 'mer'],
 ];
@@ -79,6 +81,7 @@ export default function App() {
         {fane === 'uttak' && <Uttak {...felles} />}
         {fane === 'inn' && <Inn key={innModus} startModus={innModus} {...felles} />}
         {fane === 'handle' && <Handleliste {...felles} />}
+        {fane === 'kokebok' && <Kokebok {...felles} />}
         {fane === 'lager' && <Lager key={lagerSted} startSted={lagerSted} {...felles} />}
         {fane === 'mer' && <Mer {...felles} />}
       </main>

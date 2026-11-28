@@ -404,3 +404,49 @@ summary { min-height: 48px; display: flex; align-items: center; color: var(--sof
 .impuls-flytende { position: fixed; right: 18px; bottom: calc(22px + env(safe-area-inset-bottom)); z-index: 5; display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-radius: 999px; background: var(--rav); color: var(--fjord-ink); font-weight: 700; font-size: 17px; box-shadow: 0 8px 24px rgba(0,0,0,.18); cursor: pointer; }
 .impuls-flytende.laster { opacity: .8; }
 .handletur .tur-innhold { padding-bottom: 110px; }
+.kilde-oppskrift { background: var(--rav-svak); color: var(--rav); }
+
+/* Kokebok */
+.middagskort { display: grid; gap: 12px; }
+.middagskort h2, .middagskort p { margin: 0; }
+.forslagliste { display: grid; gap: 12px; }
+.forslag h3 { margin: 0 0 4px; font-size: 20px; }
+.forslag p { margin: 0 0 6px; }
+.forslag .valg { margin-top: 8px; }
+.hvorfor { color: var(--fjord); font-weight: 600; }
+.mangler { color: var(--rav); font-weight: 600; }
+.kokebok-hode { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; }
+.kokebok-hode h2 { margin: 0; }
+.kokebok-hode .primær { display: inline-flex; align-items: center; gap: 6px; }
+.kokebok .bryter button { display: inline-flex; align-items: center; gap: 6px; }
+.oppskriftliste { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.oppskriftliste button { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--flate); text-align: left; color: inherit; font: inherit; cursor: pointer; }
+.oppskriftliste .navn { display: grid; gap: 2px; }
+.oppskriftliste .navn b { display: inline-flex; align-items: center; gap: 6px; font-size: 17px; }
+.oppskriftliste .navn b svg { color: var(--rav); }
+.dekning { flex: none; min-width: 48px; text-align: center; padding: 4px 8px; border-radius: 999px; background: var(--rav-svak); color: var(--rav); font-weight: 700; font-size: 14px; }
+.dekning.full { background: var(--fjord-svak); color: var(--fjord); }
+.tilbake { justify-self: start; padding: 0; }
+.leser { display: flex; align-items: center; gap: 12px; font-weight: 600; }
+.oppskrift-hode { display: flex; justify-content: space-between; gap: 12px; }
+.oppskrift-hode h2 { margin: 0 0 4px; }
+.oppskrift-hode p { margin: 0 0 4px; }
+.stjerneknapp { flex: none; width: 52px; height: 52px; border-radius: 14px; border: 1px solid var(--line); background: var(--flate); color: var(--soft); display: grid; place-items: center; cursor: pointer; }
+.stjerneknapp.på { color: var(--rav); background: var(--rav-svak); border-color: transparent; }
+.stjerneknapp.på svg { fill: currentColor; }
+.notat { padding: 10px 12px; border-radius: 10px; background: var(--flate-2); }
+.porsjoner { display: flex; align-items: center; justify-content: space-between; margin: 14px 0 4px; }
+.oppskrift h3 { margin: 18px 0 8px; }
+.ingredienser { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 2px; }
+.ingredienser label { display: grid; grid-template-columns: 26px 1fr auto auto; align-items: center; gap: 10px; padding: 9px 4px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.ingredienser input { width: 20px; height: 20px; min-height: 0; padding: 0; margin: 0; accent-color: var(--rav); }
+.ingredienser .ok { color: var(--fjord); display: grid; place-items: center; }
+.ingredienser small { color: var(--soft); font-size: 13px; text-align: right; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ingredienser li.mangler small { color: var(--rav); font-weight: 600; }
+.ingredienser .lenke { padding: 0 2px; font-size: 13px; }
+.steg { margin: 0; padding-left: 22px; display: grid; gap: 10px; line-height: 1.5; }
+.steg li::marker { font-weight: 700; color: var(--fjord); }
+.oppskrift .kilde a { color: var(--fjord); }
+.oppskrift > .valg { margin-bottom: 8px; }
+textarea { width: 100%; box-sizing: border-box; font: inherit; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--flate); color: var(--ink); resize: vertical; line-height: 1.5; }
+.oppskriftliste .navn b svg { fill: currentColor; }

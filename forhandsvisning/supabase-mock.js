@@ -32,7 +32,19 @@ const KURV = [
   { id: 'kv1', handleliste_id: 'h1', navn: 'Lettmelk', merke: 'Tine', pakning_mengde: 1, pakning_enhet: 'l', holdbarhet: d(9), lagringssted: 'kjoleskap', antall: 4, status: 'i_kurv' },
   { id: 'kv2', handleliste_id: null, navn: 'Kvikk Lunsj 3-pk', merke: 'Freia', pakning_mengde: 141, pakning_enhet: 'g', holdbarhet: d(200), lagringssted: 'skap', antall: 1, status: 'i_kurv' },
 ];
-const DATA = { kurv_vare: KURV, produkt: [], beholder: [{ id: 'b1', navn: 'Krydderglass', vekt_g: 85 }, { id: 'b2', navn: 'Glassboks 1 l', vekt_g: 410 }], lager: LAGER, handleliste_vare: HL, unormal_uke: [{ uke: '2026-11-16' }], husstand: [{ id: 'h', navn: 'Hjemme', glass_ml: 300, handledag: 4, handletime: 14, personer: ['Kari', 'Ola', 'Nora', 'Per'] }],
+const OPPSKRIFTER = [
+  { id: 'o1', navn: 'Taco', porsjoner: 4, tid_min: 30, favoritt: true, antall_laget: 6, beskrivelse: 'Fredagstaco med hjemmelaget krydder.',
+    ingredienser: [{ navn: 'kjøttdeig', mengde: 400, enhet: 'g' }, { navn: 'tortillalefser', mengde: 8, enhet: 'stk' }, { navn: 'rømme', mengde: 3, enhet: 'dl' },
+      { navn: 'agurk', mengde: 1, enhet: 'stk' }, { navn: 'revet ost', mengde: 200, enhet: 'g' }, { navn: 'salt', basis: true }],
+    fremgangsmate: ['Brun kjøttdeigen i en stekepanne.', 'Tilsett krydder og litt vann, og la det småkoke i 5 minutter.', 'Varm lefsene og sett frem tilbehøret.'] },
+  { id: 'o2', navn: 'Laks i ovn med poteter', porsjoner: 4, tid_min: 40, favoritt: true, antall_laget: 2,
+    ingredienser: [{ navn: 'laksefilet', mengde: 600, enhet: 'g' }, { navn: 'poteter', mengde: 1, enhet: 'kg' }, { navn: 'brokkoli', mengde: 1, enhet: 'stk' }],
+    fremgangsmate: ['Kok potetene.', 'Stek laksen i ovnen på 200 grader i 15 minutter.'] },
+  { id: 'o3', navn: 'Lapskaus', porsjoner: 6, tid_min: 90, favoritt: false, antall_laget: 0,
+    ingredienser: [{ navn: 'svinekjøtt', mengde: 600, enhet: 'g' }, { navn: 'poteter', mengde: 1, enhet: 'kg' }, { navn: 'gulrot', mengde: 3, enhet: 'stk' }, { navn: 'løk', mengde: 1, enhet: 'stk' }],
+    fremgangsmate: ['Skjær alt i terninger og kok i 1 time.'] },
+];
+const DATA = { oppskrift: OPPSKRIFTER, kurv_vare: KURV, produkt: [], beholder: [{ id: 'b1', navn: 'Krydderglass', vekt_g: 85 }, { id: 'b2', navn: 'Glassboks 1 l', vekt_g: 410 }], lager: LAGER, handleliste_vare: HL, unormal_uke: [{ uke: '2026-11-16' }], husstand: [{ id: 'h', navn: 'Hjemme', glass_ml: 300, handledag: 4, handletime: 14, personer: ['Kari', 'Ola', 'Nora', 'Per'] }],
   utgift: [{ type: 'pose', belop: 4.5, antall: 1 }, { type: 'pose', belop: 9, antall: 2 }, { type: 'pant', belop: 6 }], hendelse: [{ id: 'a' }, { id: 'b' }] };
 const kjede = (tabell) => { const svar = { data: DATA[tabell] || [], error: null };
   const k = new Proxy({}, { get: (_, p) => p === 'then' ? (r) => r(svar) : p === 'single' ? () => Promise.resolve({ data: (DATA[tabell] || [])[0], error: null }) : () => k });
@@ -47,6 +59,15 @@ export async function hentLager() { return LAGER; }
 export async function spørClaude(b) {
   if (b.modus === 'uttak' && globalThis.MOCK_BANAN) return { pakning_id: 'b0', vare: 'Banan', antall_stk: 2, andel_igjen: null, grunnlag_mengde: 'To bananer' };
   if (b.modus === 'uttak') return { pakning_id: '1', vare: 'Lettmelk', andel_igjen: 0.4, vekt_g: 452, grunnlag_mengde: 'Anslått fra bildet' };
+  if (b.modus === 'middag') return { forslag: [
+    { navn: 'Kjøttdeigsaus med spagetti', hvorfor: 'Kjøttdeigen går ut i morgen.', bruker: ['Kjøttdeig'], mangler: ['spagetti'], tid_min: 30, porsjoner: 4,
+      ingredienser: [{ navn: 'kjøttdeig', mengde: 400, enhet: 'g' }, { navn: 'spagetti', mengde: 400, enhet: 'g' }, { navn: 'gulrot', mengde: 2, enhet: 'stk' }, { navn: 'hermetiske tomater', mengde: 1, enhet: 'boks' }, { navn: 'salt', basis: true }],
+      fremgangsmate: ['Brun kjøttdeigen.', 'Tilsett revet gulrot og tomater, og la det koke i 20 minutter.', 'Kok spagettien.'] },
+    { navn: 'Laks med ovnsbakte gulrøtter', hvorfor: 'Bruker laksen og gulrøttene dere har.', bruker: ['Laksefilet', 'Gulrøtter'], mangler: [], tid_min: 35, porsjoner: 4,
+      ingredienser: [{ navn: 'laksefilet', mengde: 600, enhet: 'g' }, { navn: 'gulrot', mengde: 6, enhet: 'stk' }, { navn: 'olivenolje', mengde: 2, enhet: 'ss', basis: true }],
+      fremgangsmate: ['Skjær gulrøttene i staver og bak dem i 20 minutter.', 'Legg på laksen og bak 15 minutter til.'] },
+    { navn: 'Lapskaus', hvorfor: 'En favoritt – dere har lapskaus i fryseren.', bruker: ['Lapskaus, 4 porsjoner'], mangler: ['flatbrød'], tid_min: 15, porsjoner: 4,
+      ingredienser: [{ navn: 'lapskaus', mengde: 4, enhet: 'porsjoner' }, { navn: 'flatbrød', mengde: 1, enhet: 'pk' }], fremgangsmate: ['Tin og varm opp lapskausen.'] } ] };
   if (b.modus === 'kvittering') return { butikk: 'Rema 1000 Finnsnes', dato: d(0), total: 132.4, linjer: [
     { tekst: 'TINE LETTMELK 1L', vare: 'Lettmelk', kategori: 'meieri', antall: 4, pris: 87.6, type: 'mat', lagringssted: 'kjoleskap', holdbarhet_dager: 8, kurv_id: 'kv1', sikker: true },
     { tekst: 'AGURK', vare: 'Agurk', kategori: 'frukt_gront', antall: 1, pris: 19.9, type: 'mat', lagringssted: 'kjoleskap', holdbarhet_dager: 7, kurv_id: null, sikker: true },

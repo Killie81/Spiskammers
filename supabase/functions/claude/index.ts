@@ -87,6 +87,54 @@ Svar KUN med ett JSON-objekt:
  "type": "mat", "pant", "pose" eller "ikke_mat", "lagringssted": en av ${STEDER}, "holdbarhet_dager": heltall eller null, "stykkvis": true eller false, "sikker": true eller false${kurv.length ? `, "kurv_id": id fra handlevogna eller null` : ""}}]}`;
 }
 
+const OPPSKRIFT_JSON = `{"navn": rettens navn, "beskrivelse": én kort setning, "porsjoner": heltall, "tid_min": heltall eller null,
+ "kategori": "middag", "lunsj", "frokost", "dessert", "bakst", "tilbehor" eller "annet",
+ "ingredienser": [{"navn": ingrediensens navn slik man kjøper den i butikken, i entall og uten tilberedning (f.eks. "løk", ikke "2 finhakkede løker"),
+   "mengde": tall eller null, "enhet": "g", "kg", "ml", "dl", "l", "ss", "ts", "stk", "pk", "boks", "fedd", "klype" eller null,
+   "basis": true for ting nesten alle har hjemme (salt, pepper, vann, matolje, sukker, hvetemel), ellers false}],
+ "fremgangsmate": [ett steg per element, korte setninger på norsk]}`;
+
+function promptOppskrift(tekst: string | null) {
+  return `${tekst ? `Her er en oppskrift (tekst eller innholdet på en nettside):\n<<<\n${tekst}\n>>>` : "Du ser et bilde eller en PDF av en oppskrift."}
+Gjør den om til en strukturert norsk oppskrift. Oversett til norsk om nødvendig, og bruk metriske mål.
+Svar KUN med ett JSON-objekt:
+${OPPSKRIFT_JSON}`;
+}
+
+type LagerLinje = { navn: string; sted?: string; andel?: number; holdbarhet?: string | null; antall?: number };
+
+function promptMiddag(lager: LagerLinje[], favoritter: string[], ønske: string | null, antall: number) {
+  const liste = lager.map((l) =>
+    `- ${l.navn}${l.antall && l.antall > 1 ? ` × ${l.antall}` : ""} | ${l.sted ?? ""} | ${Math.round((l.andel ?? 1) * 100)} %${l.holdbarhet ? ` | holdbar til ${l.holdbarhet}` : ""}`
+  ).join("\n");
+  return `Du er kokken i en norsk familie med fire personer. Dagens dato er ${idag()}.
+Dette har de hjemme nå:
+${liste || "(lageret er tomt)"}
+${favoritter.length ? `Favorittrettene deres: ${favoritter.join(", ")}.` : ""}
+${ønske ? `Ønske for i dag: ${ønske}` : ""}
+Foreslå ${antall} ulike middager. Bruk mest mulig av det de har, og prioriter varer som snart går ut på dato.
+Det er fint om én av dem er en favoritt hvis den passer. Hold det til vanlig norsk hverdagsmat med ingredienser fra norsk dagligvarebutikk.
+Svar KUN med ett JSON-objekt:
+{"forslag": [{"hvorfor": én kort setning om hvorfor denne passer i dag (f.eks. hvilken vare som må brukes),
+  "bruker": [navnene på lagervarene fra listen som brukes], "mangler": [ingredienser som må kjøpes, uten basisvarer],
+  pluss alle feltene i en oppskrift: ${OPPSKRIFT_JSON}}]}`;
+}
+
+// Hent tekstinnholdet på en oppskriftsside. Bare vanlige nettadresser.
+async function hentSide(url: string): Promise<string> {
+  const u = new URL(url);
+  if (!/^https?:$/.test(u.protocol)) throw new Error("Ugyldig lenke");
+  const svar = await fetch(u, { headers: { "user-agent": "Mozilla/5.0 Spiskammers" }, redirect: "follow" });
+  if (!svar.ok) throw new Error(`Siden svarte ${svar.status}`);
+  const html = (await svar.text()).slice(0, 600_000);
+  // Mange oppskriftssider har strukturerte data (schema.org/Recipe) – ta dem med først.
+  const ld = [...html.matchAll(/<script[^>]+application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi)].map((m) => m[1]).join("\n");
+  const tekst = html
+    .replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>|<noscript[\s\S]*?<\/noscript>/gi, " ")
+    .replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ");
+  return `${ld.slice(0, 15_000)}\n${tekst.slice(0, 25_000)}`;
+}
+
 // Supabase gir funksjonen prosjektets offentlige nøkkel, enten som gammel anon-nøkkel eller ny publishable-nøkkel.
 function offentligNøkkel(): string {
   const anon = Deno.env.get("SUPABASE_ANON_KEY");
@@ -119,16 +167,26 @@ Deno.serve(async (req) => {
     return json({ feil: "ANTHROPIC_API_KEY i Supabase har feil format. Lim inn bare nøkkelen (sk-ant-…), uten annen tekst." }, 500);
   }
 
-  let input: { modus: string; bilde: string; mediaType?: string; ean?: string | null; kandidater?: Kandidat[]; beholdere?: Beholder[]; kurv?: KurvVare[] };
+  let input: { modus: string; bilde?: string; tekst?: string; url?: string; lager?: LagerLinje[]; favoritter?: string[]; ønske?: string; antall?: number; mediaType?: string; ean?: string | null; kandidater?: Kandidat[]; beholdere?: Beholder[]; kurv?: KurvVare[] };
   try { input = await req.json(); } catch { return json({ feil: "Ugyldig forespørsel" }, 400); }
-  if (!input?.bilde) return json({ feil: "Bilde mangler" }, 400);
+  const utenBilde = input?.modus === "middag" || (input?.modus === "oppskrift" && (input.tekst || input.url));
+  if (!input?.bilde && !utenBilde) return json({ feil: "Bilde mangler" }, 400);
 
-  const prompt = input.modus === "kvittering" ? promptKvittering((input.kurv ?? []).slice(0, 150))
+  let sidetekst: string | null = null;
+  if (input.modus === "oppskrift" && input.url) {
+    try { sidetekst = await hentSide(input.url); }
+    catch (e) { return json({ feil: `Fikk ikke hentet oppskriften fra lenken (${(e as Error).message}). Lim inn teksten i stedet.` }, 502); }
+  }
+
+  const prompt = input.modus === "middag"
+    ? promptMiddag((input.lager ?? []).slice(0, 250), (input.favoritter ?? []).slice(0, 40), (input.ønske ?? "").slice(0, 300) || null, Math.min(Math.max(input.antall ?? 3, 1), 5))
+    : input.modus === "oppskrift" ? promptOppskrift(sidetekst ?? (input.tekst ? input.tekst.slice(0, 30_000) : null))
+    : input.modus === "kvittering" ? promptKvittering((input.kurv ?? []).slice(0, 150))
     : input.modus === "uttak" ? promptUttak(input.ean ?? null, (input.kandidater ?? []).slice(0, 300))
     : promptVare(input.ean ?? null, (input.beholdere ?? []).slice(0, 50));
 
   const mediaType = input.mediaType ?? "image/jpeg";
-  const kilde = mediaType === "application/pdf"
+  const kilde = !input.bilde ? null : mediaType === "application/pdf"
     ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: input.bilde } }
     : { type: "image", source: { type: "base64", media_type: mediaType, data: input.bilde } };
 
@@ -139,8 +197,8 @@ Deno.serve(async (req) => {
       headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: input.modus === "kvittering" ? 4000 : 1200,
-        messages: [{ role: "user", content: [kilde, { type: "text", text: prompt }] }],
+        max_tokens: input.modus === "middag" ? 6000 : input.modus === "kvittering" || input.modus === "oppskrift" ? 4000 : 1200,
+        messages: [{ role: "user", content: [...(kilde ? [kilde] : []), { type: "text", text: prompt }] }],
       }),
     });
   } catch {

@@ -15,7 +15,7 @@ function KurvFoto({ onFil, laster, etikett, stor }) {
   );
 }
 
-const KILDE = { forslag: 'Forslag', fast: 'Fast', manuell: 'Lagt til' };
+const KILDE = { forslag: 'Forslag', fast: 'Fast', manuell: 'Lagt til', oppskrift: 'Oppskrift' };
 
 export default function Handleliste({ husstand, vis, gåTil }) {
   const [varer, setVarer] = useState(null);
